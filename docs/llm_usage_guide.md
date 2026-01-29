@@ -9,6 +9,8 @@ Oto raport z analizy kodu:
 
 [WKLEJ TREŚĆ PLIKU 20260128_221849.llm.md TUTAJ]
 
+W raporcie jest też sekcja **Recent Changes** oraz plik `changelog.md` w katalogu raportu. Uwzględnij te informacje w ocenie ryzyka i planie (np. czy ostatnie zmiany mogą wpływać na formatowanie / testy).
+
 ### Proszę o:
 
 1. **Analizę priorytetów:** 

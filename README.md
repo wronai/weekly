@@ -43,6 +43,8 @@ Weekly is a comprehensive Python project quality analyzer that helps developers 
 
 Weekly can scan multiple Git repositories in a directory structure and generate comprehensive reports for each one, plus a summary report.
 
+It also extracts **Recent Changes** (commits, files/lines changed, commit type breakdown) and writes a per-repo `changelog.md` into the report directory.
+
 ### Basic Usage
 
 ```bash
@@ -60,6 +62,19 @@ weekly scan ~/github -j 8
 
 # Generate JSON reports instead of HTML
 weekly scan ~/github --format json
+```
+
+### Recent Changes + changelog.md
+
+When you run `weekly scan ... --since "..."`, the per-repo reports include a **Recent Changes** section and a `changelog.md` file in the repository report directory.
+
+- **If `git-cliff` is available**, Weekly uses it to generate `changelog.md`.
+- **If `git-cliff` is not available**, Weekly falls back to an internal summary (commit + diff stats).
+
+Optional installation (recommended) for richer changelog output:
+
+```bash
+cargo install git-cliff
 ```
 
 ### Example Output

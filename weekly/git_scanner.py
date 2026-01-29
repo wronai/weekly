@@ -93,7 +93,8 @@ class GitRepo:
         """Check if the repository has changes since a specific date."""
         if not self.last_commit_date:
             return False
-        return self.last_commit_date >= since
+        # Compare dates only, ignoring time
+        return self.last_commit_date.date() >= since.date()
     
     def _run_git(self, command: str) -> subprocess.CompletedProcess:
         """Run a git command in the repository."""
@@ -196,11 +197,8 @@ class GitScanner:
         for root, dirs, _ in os.walk(self.root_dir):
             if ".git" in dirs:
                 git_dirs.append(Path(root))
-                self.console.print(f"[dim]Found git repo: {Path(root)}[/]")
                 if not self.recursive:
                     dirs[:] = []  # Don't recurse further
-        
-        self.console.print(f"[dim]Found {len(git_dirs)} git directories[/]")
         
         # Create GitRepo objects
         for git_dir in git_dirs:
@@ -227,13 +225,9 @@ class GitScanner:
                     continue
                     
                 repos.append(repo)
-                self.console.print(f"[dim]Added repo: {repo.org}/{repo.name}[/]")
             except Exception as e:
-                import traceback
                 self.console.print(f"[yellow]Warning: Failed to process {git_dir}: {e}")
-                self.console.print(f"[dim]Traceback: {traceback.format_exc()}[/]")
         
-        self.console.print(f"[dim]Total repos: {len(repos)}[/]")
         return repos
     
     def scan_repo(self, repo: GitRepo) -> ScanResult:
@@ -420,17 +414,16 @@ class GitScanner:
                 else:
                     severity = "low"
 
+                # Pass metadata directly, don't wrap in another dict
                 check_results[name] = ReportCheckResult(
                     name=name,
                     description="",
                     is_ok=is_ok,
                     message=check_result.title,
-                    details={
-                        "details": check_result.details,
-                        "metadata": check_result.metadata,
-                    },
+                    details=check_result.details,
                     next_steps=list(check_result.suggestions or []),
                     severity=severity,
+                    metadata=check_result.metadata  # Pass metadata directly
                 )
                 continue
 
@@ -442,7 +435,8 @@ class GitScanner:
                 message=getattr(check_result, 'message', ''),
                 details=getattr(check_result, 'details', None),
                 next_steps=getattr(check_result, 'next_steps', []),
-                severity="high" if not getattr(check_result, 'is_ok', True) else "low"
+                severity="high" if not getattr(check_result, 'is_ok', True) else "low",
+                metadata=getattr(check_result, 'metadata', None)
             )
         
         # Add changelog information if available
@@ -456,21 +450,19 @@ class GitScanner:
                 description="Recent changes and commits",
                 is_ok=True,
                 message=f"Found {len(result.change_summary.commits)} commits since {self.since.strftime('%Y-%m-%d')}",
-                details={
-                    "summary": changelog_info,
-                    "metadata": {
-                        "total_commits": len(result.change_summary.commits),
-                        "files_changed": result.change_summary.total_files,
-                        "additions": result.change_summary.total_additions,
-                        "deletions": result.change_summary.total_deletions,
-                        "commit_types": result.change_summary.commit_types
-                    }
-                },
+                details=changelog_info,
                 next_steps=[
                     f"View full changelog: {output_dir}/changelog.md",
                     "Review recent commits for potential issues"
                 ],
-                severity="info"
+                severity="info",
+                metadata={
+                    "total_commits": len(result.change_summary.commits),
+                    "files_changed": result.change_summary.total_files,
+                    "additions": result.change_summary.total_additions,
+                    "deletions": result.change_summary.total_deletions,
+                    "commit_types": result.change_summary.commit_types
+                }
             )
         
         # Generate the report

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -75,7 +76,8 @@ class GitChangeAnalyzer:
         Returns:
             CompletedProcess object
         """
-        full_command = ["git", "-C", str(self.repo_path)] + command.split()
+        # Use shlex.split to properly handle quoted arguments
+        full_command = ["git", "-C", str(self.repo_path)] + shlex.split(command)
         return subprocess.run(
             full_command,
             capture_output=capture_output,
@@ -273,10 +275,34 @@ sort_commits = "oldest"
             # Write config
             with open(config_path, 'w') as f:
                 f.write(config_content)
-            
-            # Run git-cliff
-            cmd = f'cliff --since "{since_str}" --config "{config_path}"'
-            result = self._run_git(cmd, capture_output=True)
+
+            # Compute a git RANGE for git-cliff.
+            # git-cliff v2.x uses a positional Git revision range (e.g. A^..HEAD).
+            # We pick the oldest commit that is >= since_str.
+            oldest_commit = self._run_git(
+                f'rev-list --reverse --since="{since_str}" HEAD',
+                capture_output=True,
+            ).stdout.strip().splitlines()[:1]
+            if not oldest_commit:
+                return False
+            oldest_commit_hash = oldest_commit[0].strip()
+            git_range = f"{oldest_commit_hash}^..HEAD"
+
+            # Run git-cliff in the repository
+            try:
+                result = subprocess.run(
+                    ["git-cliff", git_range, "--config", str(config_path)],
+                    capture_output=True,
+                    text=True,
+                    errors="replace",
+                    cwd=self.repo_path,
+                )
+            except FileNotFoundError:
+                self.console.print("[yellow]git-cliff not found; skipping git-cliff changelog generation[/]")
+                return False
+            except subprocess.SubprocessError as e:
+                self.console.print(f"[yellow]git-cliff failed to run: {e}[/]")
+                return False
             
             if result.returncode == 0:
                 # Save to output path

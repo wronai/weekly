@@ -1,3 +1,18 @@
+## [0.1.34] - 2026-01-29
+
+### Summary
+
+docs(docs): add markdown output
+
+### Changes
+
+- build: update Makefile
+- docs: update README
+- docs: update llm_usage_guide.md
+- update requirements.txt
+- update weekly/git_change_analyzer.py
+- update weekly/git_scanner.py
+
 # Changelog
 
 All notable changes to this project will be documented in this file.

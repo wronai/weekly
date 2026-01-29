@@ -19,7 +19,7 @@ COVERAGE = poetry run coverage
 .DEFAULT_GOAL := help
 .PHONY: help install install-dev test test-cov lint format format-check typecheck \
         clean build publish check docs serve pre-commit bump-version safety dep-update \
-        info release
+        info release scan scan-since
 
 # Help target with colored output
 ## Show this help message
@@ -182,3 +182,13 @@ release: check build
 	@echo "${YELLOW}Creating release...${RESET}"
 	git push origin main --tags
 	poetry publish --build
+
+## Run weekly scan (defaults: ROOT=~/github, OUT=./weekly-reports)
+scan:
+	@echo "${YELLOW}Running weekly scan...${RESET}"
+	poetry run weekly scan $(ROOT) -o $(OUT)
+
+## Run weekly scan with since filter (defaults: ROOT=~/github, OUT=./weekly-reports, SINCE='7 days ago')
+scan-since:
+	@echo "${YELLOW}Running weekly scan with since filter...${RESET}"
+	poetry run weekly scan $(ROOT) -o $(OUT) --since "$(SINCE)"
