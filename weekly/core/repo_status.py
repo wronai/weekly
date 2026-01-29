@@ -2,12 +2,14 @@
 Repository status model for Weekly.
 """
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 
 @dataclass
 class RepoStatus:
     """Class representing repository status and statistics."""
+
     name: str
     description: str = ""
     created_at: str = ""
@@ -19,7 +21,7 @@ class RepoStatus:
     commits: List[Dict[str, Any]] = field(default_factory=list)
     todos: List[str] = field(default_factory=list)
     generated_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -33,5 +35,5 @@ class RepoStatus:
             "languages": self.languages,
             "commits": self.commits,
             "todos": self.todos,
-            "generated_at": self.generated_at
+            "generated_at": self.generated_at,
         }

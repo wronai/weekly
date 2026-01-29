@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from weekly.checkers.style import StyleChecker
 
+
 def test_parse_mypy_output():
     """Test parsing mypy output."""
     output = """
@@ -17,10 +18,10 @@ def test_parse_mypy_output():
     /path/to/file.py:10: note: "return" has type "int"; expected "str"
     Found 1 error in 1 file (checked 1 source file)
     """
-    
+
     style_checker = StyleChecker()
     style_checker._parse_mypy_output(output)
-    
+
     print(f"Issues found: {len(style_checker.issues)}")
     for i, issue in enumerate(style_checker.issues, 1):
         print(f"\nIssue {i}:")
@@ -30,6 +31,7 @@ def test_parse_mypy_output():
         print(f"  Column: {issue.column}")
         print(f"  Code: {issue.code}")
         print(f"  Message: {issue.message}")
+
 
 if __name__ == "__main__":
     test_parse_mypy_output()

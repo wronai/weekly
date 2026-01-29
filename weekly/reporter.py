@@ -5,20 +5,22 @@ Report generation module for weekly.
 from __future__ import annotations
 
 import json
-import markdown
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict
-from dataclasses import asdict
+
+import markdown
 
 if TYPE_CHECKING:
     from .core.repo_status import RepoStatus
 
+
 class ReportGenerator:
     """Class for generating reports from repository status."""
-    
+
     @staticmethod
-    def generate_markdown(status: 'RepoStatus') -> str:
+    def generate_markdown(status: "RepoStatus") -> str:
         """Generate markdown report from status data."""
         return f"""# {status.name}
 
@@ -51,39 +53,39 @@ class ReportGenerator:
 """
 
     @classmethod
-    def save_reports(cls, status: 'RepoStatus', output_dir: Path) -> None:
+    def save_reports(cls, status: "RepoStatus", output_dir: Path) -> None:
         """Save all report files to the specified directory.
-        
+
         Args:
             status: The repository status to generate reports from
             output_dir: Directory to save the report files
         """
         # Create output directory if it doesn't exist
         output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Generate markdown content
         markdown_content = cls.generate_markdown(status)
-        
+
         # Generate HTML content
         html_content = cls.generate_html(status, markdown_content)
-        
+
         # Save JSON report
         json_path = output_dir / "status.json"
-        with open(json_path, 'w') as f:
+        with open(json_path, "w") as f:
             json.dump(status.to_dict(), f, indent=2, default=str)
-        
+
         # Save Markdown report
         md_path = output_dir / "status.md"
-        with open(md_path, 'w') as f:
+        with open(md_path, "w") as f:
             f.write(markdown_content)
-        
+
         # Save HTML report
         html_path = output_dir / "index.html"
-        with open(html_path, 'w') as f:
+        with open(html_path, "w") as f:
             f.write(html_content)
 
     @staticmethod
-    def generate_html(status: 'RepoStatus', markdown_content: str) -> str:
+    def generate_html(status: "RepoStatus", markdown_content: str) -> str:
         """Generate HTML report with download option."""
         return f"""<!DOCTYPE html>
 <html>

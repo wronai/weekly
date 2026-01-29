@@ -1,17 +1,17 @@
 """
 Report class for Weekly - represents the results of project analysis.
 """
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from .project import Project
 
 
 class CheckResult:
     """Represents the result of a single check."""
-    
+
     def __init__(
         self,
         checker_name: str,
@@ -19,10 +19,10 @@ class CheckResult:
         status: str,
         details: str,
         suggestions: Optional[List[str]] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         """Initialize a check result.
-        
+
         Args:
             checker_name: Name of the checker that produced this result
             title: Short title describing the check
@@ -37,16 +37,16 @@ class CheckResult:
         self.details = details
         self.suggestions = suggestions or []
         self.metadata = metadata or {}
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the check result to a dictionary."""
         return {
-            'checker_name': self.checker_name,
-            'title': self.title,
-            'status': self.status,
-            'details': self.details,
-            'suggestions': self.suggestions,
-            'metadata': self.metadata
+            "checker_name": self.checker_name,
+            "title": self.title,
+            "status": self.status,
+            "details": self.details,
+            "suggestions": self.suggestions,
+            "metadata": self.metadata,
         }
 
     @property
@@ -77,11 +77,11 @@ class CheckResult:
 
 class Report:
     """Represents a report of project analysis results."""
-    
+
     def __init__(self, project: Project):
         """
         Initialize with the project being analyzed.
-        
+
         Args:
             project: The project this report is for
         """
@@ -89,80 +89,83 @@ class Report:
         self.generated_at = datetime.now(timezone.utc)
         self.results: List[CheckResult] = []
         self.summary = {
-            'total_checks': 0,
-            'success': 0,
-            'warnings': 0,
-            'errors': 0,
+            "total_checks": 0,
+            "success": 0,
+            "warnings": 0,
+            "errors": 0,
         }
-    
+
     def add_result(self, result: CheckResult) -> None:
         """
         Add a check result to the report.
-        
+
         Args:
             result: The check result to add
         """
         self.results.append(result)
-        self.summary['total_checks'] += 1
-        
+        self.summary["total_checks"] += 1
+
         # Update summary counts
-        if result.status == 'success':
-            self.summary['success'] += 1
-        elif result.status == 'warning':
-            self.summary['warnings'] += 1
-        elif result.status == 'error':
-            self.summary['errors'] += 1
-    
+        if result.status == "success":
+            self.summary["success"] += 1
+        elif result.status == "warning":
+            self.summary["warnings"] += 1
+        elif result.status == "error":
+            self.summary["errors"] += 1
+
     def get_suggestions(self) -> List[Dict[str, Any]]:
         """
         Get all suggestions from the report.
-        
+
         Returns:
             List of dictionaries containing suggestion details
         """
         suggestions = []
         for result in self.results:
             if result.suggestions:
-                suggestions.append({
-                    'checker': result.checker_name,
-                    'title': result.title,
-                    'suggestions': result.suggestions,
-                    'status': result.status,
-                })
+                suggestions.append(
+                    {
+                        "checker": result.checker_name,
+                        "title": result.title,
+                        "suggestions": result.suggestions,
+                        "status": result.status,
+                    }
+                )
         return suggestions
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert the report to a dictionary.
-        
+
         Returns:
             Dictionary representation of the report
         """
         return {
-            'project': str(self.project.path),
-            'generated_at': self.generated_at.isoformat(),
-            'summary': self.summary,
-            'results': [r.to_dict() for r in self.results],
-            'suggestions': self.get_suggestions(),
+            "project": str(self.project.path),
+            "generated_at": self.generated_at.isoformat(),
+            "summary": self.summary,
+            "results": [r.to_dict() for r in self.results],
+            "suggestions": self.get_suggestions(),
         }
-    
+
     def to_json(self, indent: int = 2) -> str:
         """
         Convert the report to a JSON string.
-        
+
         Args:
             indent: Number of spaces to indent the JSON output
-            
+
         Returns:
             JSON string representation of the report
         """
         import json
+
         return json.dumps(self.to_dict(), indent=indent)
-    
+
     def to_markdown(self) -> str:
         """
         Convert the report to a markdown string.
-        
+
         Returns:
             Markdown representation of the report
         """
@@ -179,26 +182,28 @@ class Report:
             "",
             "## Detailed Results",
         ]
-        
+
         for result in self.results:
             status_icon = {
-                'success': '✅',
-                'warning': '⚠️',
-                'error': '❌',
-            }.get(result.status, 'ℹ️')
-            
-            lines.extend([
-                f"### {status_icon} {result.title}",
-                f"*{result.checker_name}*",
-                "",
-                result.details,
-                "",
-            ])
-            
+                "success": "✅",
+                "warning": "⚠️",
+                "error": "❌",
+            }.get(result.status, "ℹ️")
+
+            lines.extend(
+                [
+                    f"### {status_icon} {result.title}",
+                    f"*{result.checker_name}*",
+                    "",
+                    result.details,
+                    "",
+                ]
+            )
+
             if result.suggestions:
                 lines.append("**Suggestions:**")
                 for suggestion in result.suggestions:
                     lines.append(f"- {suggestion}")
                 lines.append("")
-        
+
         return "\n".join(lines)

@@ -1,14 +1,15 @@
 """Tests for the analyzer module."""
 
-import pytest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
-
-from weekly.core.repo_status import RepoStatus
-from weekly.git_scanner import GitRepo, ScanResult
-from weekly import GitAnalyzer, CommitStats
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from weekly import CommitStats, GitAnalyzer
+from weekly.core.repo_status import RepoStatus
+from weekly.git_scanner import GitRepo, ScanResult
+
 
 def test_commit_stats_initialization():
     """Test CommitStats initialization and to_dict method."""
@@ -19,11 +20,12 @@ def test_commit_stats_initialization():
         message="Initial commit",
         changes=[{"file": "README.md", "additions": "10", "deletions": "0"}],
         additions=10,
-        deletions=0
+        deletions=0,
     )
-    
+
     assert commit.hash == "a1b2c3d"
     assert commit.to_dict()["hash"] == "a1b2c3d"
+
 
 def test_repo_status_initialization():
     """Test RepoStatus initialization and to_dict method."""
@@ -37,14 +39,15 @@ def test_repo_status_initialization():
         file_changes={"file1.txt": 10, "file2.txt": 5},
         languages={".py": 5, ".md": 2},
         commits=[],
-        todos=["Add tests"]
+        todos=["Add tests"],
     )
-    
+
     assert status.name == "test-repo"
     assert status.total_commits == 42
     assert status.to_dict()["name"] == "test-repo"
 
-@patch('subprocess.run')
+
+@patch("subprocess.run")
 def test_git_analyzer_get_commit_history(mock_run):
     """Test GitAnalyzer commit history parsing."""
     # Mock git log output
@@ -53,16 +56,16 @@ def test_git_analyzer_get_commit_history(mock_run):
 10\t5\tfile1.txt
 -\t-\tfile2.txt
     """.strip()
-    
+
     # Configure mock
     mock_result = MagicMock()
     mock_result.stdout = mock_output
     mock_run.return_value = mock_result
-    
+
     # Test
     analyzer = GitAnalyzer(Path("/fake/repo"))
     commits = analyzer.get_commit_history()
-    
+
     # Assertions
     assert len(commits) == 1
     assert commits[0].hash == "a1b2c3d"
@@ -70,7 +73,8 @@ def test_git_analyzer_get_commit_history(mock_run):
     # The test data has 10 additions and 5 deletions in the changes
     # but our implementation sums them up in the analyze() method, not here
 
-@patch('subprocess.run')
+
+@patch("subprocess.run")
 def test_git_analyzer_analyze(mock_run):
     """Test GitAnalyzer analyze method."""
     # Mock git log output
@@ -79,28 +83,28 @@ def test_git_analyzer_analyze(mock_run):
 10\t5\tsrc/main.py
 -\t-\ttests/test_main.py
     """.strip()
-    
+
     # Mock git log --reverse output
     mock_log_reverse = "2023-01-01T12:00:00Z"
-    
+
     # Configure mock
     mock_result = MagicMock()
     mock_result.stdout = mock_log
     mock_result_reverse = MagicMock()
     mock_result_reverse.stdout = mock_log_reverse
-    
+
     # Make run return different values based on arguments
     def run_side_effect(*args, **kwargs):
-        if '--reverse' in args[0]:
+        if "--reverse" in args[0]:
             return mock_result_reverse
         return mock_result
-    
+
     mock_run.side_effect = run_side_effect
-    
+
     # Test
     analyzer = GitAnalyzer(Path("/fake/repo"))
     status = analyzer.analyze()
-    
+
     # Assertions
     assert status is not None
     assert status.name == "repo"  # The repo name from the test path

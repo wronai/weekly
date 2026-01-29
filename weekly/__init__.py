@@ -2,66 +2,65 @@
 Weekly - A tool for analyzing project quality and suggesting next steps.
 """
 
+__version__: str = "0.0.0"
+
 try:
     from importlib.metadata import version
 
     __version__ = version("weekly")
 except Exception:
-    __version__ = "0.0.0"
+    pass
 
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 # Import checkers
 from .checkers.base import BaseChecker
-from .checkers.testing import TestChecker
-from .checkers.docs import DocumentationChecker
 from .checkers.ci_cd import CIChecker
-from .checkers.dependencies import DependenciesChecker
 from .checkers.code_quality import CodeQualityChecker
+from .checkers.dependencies import DependenciesChecker
+from .checkers.docs import DocumentationChecker
 from .checkers.style import StyleChecker
-
-# Import core components
-from .core.project import Project
-from .core.report import Report, CheckResult
-from .core.analyzer import analyze_project
-from .core.repo_status import RepoStatus
-from .git_analyzer import GitAnalyzer, CommitStats
-
-# Import Git scanner and report generator
-from .git_scanner import GitRepo, GitScanner, ScanResult
-from .git_report import GitReportGenerator, RepoInfo, CheckResult as GitCheckResult
+from .checkers.testing import TestChecker
 
 # Import and expose CLI
 from .cli import main
+from .core.analyzer import analyze_project
+
+# Import core components
+from .core.project import Project
+from .core.repo_status import RepoStatus
+from .core.report import CheckResult, Report
+from .git_analyzer import CommitStats, GitAnalyzer
+from .git_report import CheckResult as GitCheckResult
+from .git_report import GitReportGenerator, RepoInfo
+
+# Import Git scanner and report generator
+from .git_scanner import GitRepo, GitScanner, ScanResult
 
 __all__ = [
     # Core functionality
-    'analyze_project',
-    'Project',
-    'Report',
-    'RepoStatus',
-    'GitAnalyzer',
-    'CommitStats',
-    'main',  # Export main as cli
-    'CheckResult',
-    
+    "analyze_project",
+    "Project",
+    "Report",
+    "RepoStatus",
+    "GitAnalyzer",
+    "CommitStats",
+    "main",  # Export main as cli
+    "CheckResult",
     # Checkers
-    'BaseChecker',
-    'TestChecker',
-    'DocumentationChecker',
-    'CIChecker',
-    'DependenciesChecker',
-    'CodeQualityChecker',
-    'StyleChecker',
-    
+    "BaseChecker",
+    "TestChecker",
+    "DocumentationChecker",
+    "CIChecker",
+    "DependenciesChecker",
+    "CodeQualityChecker",
+    "StyleChecker",
     # Git scanning
-    'GitRepo',
-    'GitScanner',
-    'ScanResult',
-    'GitReportGenerator',
-    'RepoInfo',
-    'GitCheckResult',
+    "GitRepo",
+    "GitScanner",
+    "ScanResult",
+    "GitReportGenerator",
+    "RepoInfo",
+    "GitCheckResult",
 ]
-
-

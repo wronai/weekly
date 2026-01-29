@@ -1,35 +1,41 @@
 """Module for scanning Git repositories and generating reports."""
 from __future__ import annotations
 
-import os
-import sys
 import json
+import os
+import shlex
 import shutil
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Set
-from dataclasses import dataclass, asdict, field
-import subprocess
-import shlex
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
-from rich.table import Table
 from rich.panel import Panel
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+)
+from rich.table import Table
 from rich.tree import Tree
-
-from weekly.git_report import GitReportGenerator, RepoInfo, CheckResult as ReportCheckResult
-from weekly.git_change_analyzer import GitChangeAnalyzer, ChangeSummary
 
 from weekly.core.project import Project
 from weekly.core.report import CheckResult as CoreCheckResult
+from weekly.git_change_analyzer import ChangeSummary, GitChangeAnalyzer
+from weekly.git_report import CheckResult as ReportCheckResult
+from weekly.git_report import GitReportGenerator, RepoInfo
 
 
 @dataclass
 class GitRepo:
     """Represents a Git repository with its metadata."""
-    
+
     path: Path
     name: str
     org: str = ""
@@ -37,35 +43,35 @@ class GitRepo:
     has_changes: bool = False
     branch: str = "main"
     remote_url: str = ""
-    
-    def __post_init__(self):
+
+    def __post_init__(self) -> None:
         """Initialize repository metadata."""
-        if not hasattr(self, 'path') or not self.path:
+        if not hasattr(self, "path") or not self.path:
             raise ValueError("path is required")
-            
-        if not hasattr(self, 'name') or not self.name:
+
+        if not hasattr(self, "name") or not self.name:
             raise ValueError("name is required")
-            
+
         self.path = Path(self.path).resolve()
-        
+
         # Set default values for optional fields
-        if not hasattr(self, 'org') or self.org is None:
+        if not hasattr(self, "org") or self.org is None:
             self.org = ""
-            
-        if not hasattr(self, 'last_commit_date') or self.last_commit_date is None:
+
+        if not hasattr(self, "last_commit_date") or self.last_commit_date is None:
             self.last_commit_date = None
-            
-        if not hasattr(self, 'has_changes') or self.has_changes is None:
+
+        if not hasattr(self, "has_changes") or self.has_changes is None:
             self.has_changes = False
-            
-        if not hasattr(self, 'branch') or not self.branch:
+
+        if not hasattr(self, "branch") or not self.branch:
             self.branch = "main"
-            
-        if not hasattr(self, 'remote_url') or self.remote_url is None:
+
+        if not hasattr(self, "remote_url") or self.remote_url is None:
             self.remote_url = ""
 
         self._extract_metadata()
-    
+
     def _extract_metadata(self) -> None:
         """Extract metadata from the Git repository."""
         try:
@@ -73,30 +79,29 @@ class GitRepo:
             result = self._run_git("rev-parse --abbrev-ref HEAD")
             if result.returncode == 0 and result.stdout.strip():
                 self.branch = result.stdout.strip()
-            
+
             # Get the last commit date
             result = self._run_git("log -1 --format=%cd --date=iso")
             if result.returncode == 0 and result.stdout.strip():
                 self.last_commit_date = datetime.strptime(
-                    result.stdout.strip().split()[0], 
-                    "%Y-%m-%d"
+                    result.stdout.strip().split()[0], "%Y-%m-%d"
                 )
-            
+
             # Get the remote URL
             result = self._run_git("remote get-url origin")
             if result.returncode == 0 and result.stdout.strip():
                 self.remote_url = result.stdout.strip()
         except Exception as e:
             pass
-    
+
     def has_recent_changes(self, since: datetime) -> bool:
         """Check if the repository has changes since a specific date."""
         if not self.last_commit_date:
             return False
         # Compare dates only, ignoring time
         return self.last_commit_date.date() >= since.date()
-    
-    def _run_git(self, command: str) -> subprocess.CompletedProcess:
+
+    def _run_git(self, command: str) -> subprocess.CompletedProcess[str]:
         """Run a git command in the repository."""
         try:
             return subprocess.run(
@@ -104,7 +109,7 @@ class GitRepo:
                 cwd=self.path,
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
             )
         except Exception:
             return subprocess.CompletedProcess(args=command, returncode=1)
@@ -113,19 +118,20 @@ class GitRepo:
 @dataclass
 class ScanResult:
     """Represents the result of scanning a repository."""
-    
-    repo: 'GitRepo'
+
+    repo: "GitRepo"
     results: Dict[str, Any] = field(default_factory=dict)
     error: Optional[str] = None
     change_summary: Optional[ChangeSummary] = None
-    
-    def __post_init__(self):
+    changelog_path: Optional[str] = None
+    changelog_generator: Optional[str] = None
+    changelog_excerpt: Optional[str] = None
+
+    def __post_init__(self) -> None:
         """Initialize the scan result with default values."""
-        # Ensure results is always a dictionary
-        if self.results is None:
-            self.results = {}
-    
-    def to_dict(self) -> Dict:
+        # results is always a dict due to default_factory; keep hook for safety
+
+    def to_dict(self) -> Dict[str, Any]:
         """Convert the result to a dictionary."""
         serialized_results: Dict[str, Any] = {}
         for name, value in self.results.items():
@@ -147,7 +153,9 @@ class ScanResult:
                 "org": self.repo.org,
                 "branch": self.repo.branch,
                 "remote_url": self.repo.remote_url,
-                "last_commit_date": self.repo.last_commit_date.isoformat() if self.repo.last_commit_date else None,
+                "last_commit_date": self.repo.last_commit_date.isoformat()
+                if self.repo.last_commit_date
+                else None,
             },
             "results": serialized_results,
             "error": self.error,
@@ -156,7 +164,7 @@ class ScanResult:
 
 class GitScanner:
     """Scans Git repositories and generates reports."""
-    
+
     def __init__(
         self,
         root_dir: Path,
@@ -166,7 +174,7 @@ class GitScanner:
         jobs: int = 4,
     ):
         """Initialize the scanner.
-        
+
         Args:
             root_dir: Root directory to scan for Git repositories
             output_dir: Directory to save reports
@@ -181,17 +189,17 @@ class GitScanner:
         self.jobs = jobs
         self.console = Console()
         self.report_generator = GitReportGenerator()
-    
+
     def find_git_repos(self) -> List[GitRepo]:
         """Find all Git repositories in the root directory."""
         repos: List[GitRepo] = []
-        
+
         if not self.root_dir.exists():
             self.console.print(f"[red]Error: Directory not found: {self.root_dir}")
             return repos
-        
+
         self.console.print(f"[bold]Scanning for Git repositories in {self.root_dir}...")
-        
+
         # Find all .git directories
         git_dirs = []
         for root, dirs, _ in os.walk(self.root_dir):
@@ -199,7 +207,7 @@ class GitScanner:
                 git_dirs.append(Path(root))
                 if not self.recursive:
                     dirs[:] = []  # Don't recurse further
-        
+
         # Create GitRepo objects
         for git_dir in git_dirs:
             try:
@@ -217,56 +225,81 @@ class GitScanner:
                 else:
                     org = parts[0]
                     repo_name = parts[-1]
-                
+
                 repo = GitRepo(path=git_dir, name=repo_name, org=org)
-                
+
                 # Skip if no recent changes and since is specified
                 if self.since and not repo.has_recent_changes(self.since):
                     continue
-                    
+
                 repos.append(repo)
             except Exception as e:
                 self.console.print(f"[yellow]Warning: Failed to process {git_dir}: {e}")
-        
+
         return repos
-    
+
     def scan_repo(self, repo: GitRepo) -> ScanResult:
         """Scan a single repository and return the results."""
         result = ScanResult(repo=repo)
-        
+
         try:
             # Analyze changes first if since date is specified
             if self.since:
-                self.console.print(f"  📈 Analyzing changes since {self.since.strftime('%Y-%m-%d')}...")
+                self.console.print(
+                    f"  📈 Analyzing changes since {self.since.strftime('%Y-%m-%d')}..."
+                )
                 analyzer = GitChangeAnalyzer(repo.path)
                 result.change_summary = analyzer.analyze_changes(self.since)
-                
+
                 # Generate changelog
                 changelog_path = self.output_dir / repo.org / repo.name / "changelog.md"
                 changelog_path.parent.mkdir(parents=True, exist_ok=True)
-                
+
+                result.changelog_path = str(changelog_path)
+
                 # Try git-cliff first, fallback to summary
-                if not analyzer.generate_changelog_with_git_cliff(self.since, changelog_path):
-                    self.console.print("  [yellow]Using fallback changelog generation...[/]")
-                    summary_text = analyzer.generate_summary_report(result.change_summary)
-                    with open(changelog_path, 'w') as f:
-                        f.write(f"# Changelog\n\nGenerated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                used_git_cliff = analyzer.generate_changelog_with_git_cliff(
+                    self.since, changelog_path
+                )
+                if not used_git_cliff:
+                    self.console.print(
+                        "  [yellow]Using fallback changelog generation...[/]"
+                    )
+                    summary_text = analyzer.generate_summary_report(
+                        result.change_summary
+                    )
+                    with open(changelog_path, "w") as f:
+                        f.write(
+                            f"# Changelog\n\nGenerated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                        )
                         f.write(summary_text)
-                
+
+                result.changelog_generator = (
+                    "git-cliff" if used_git_cliff else "fallback"
+                )
+                try:
+                    result.changelog_excerpt = "\n".join(
+                        changelog_path.read_text(
+                            encoding="utf-8", errors="replace"
+                        ).splitlines()[:40]
+                    )
+                except OSError:
+                    result.changelog_excerpt = None
+
                 self.console.print(f"  📝 Changelog saved to {changelog_path}")
-            
+
             # Import checkers dynamically to avoid circular imports
             from weekly.checkers import (
-                StyleChecker,
+                CIChecker,
                 CodeQualityChecker,
                 DependenciesChecker,
                 DocumentationChecker,
+                StyleChecker,
                 TestChecker,
-                CIChecker,
             )
 
             project = Project(repo.path)
-            
+
             checkers = [
                 StyleChecker(),
                 CodeQualityChecker(),
@@ -275,46 +308,45 @@ class GitScanner:
                 TestChecker(),
                 CIChecker(),
             ]
-            
+
             # Run all checkers
             for checker in checkers:
                 try:
-                    if isinstance(checker, StyleChecker):
-                        check_result = checker.check(repo.path)
-                    else:
-                        check_result = checker.check(project)
+                    check_result = checker.check(project)
                     result.results[checker.name] = check_result
                 except Exception as e:
-                    self.console.print(f"[yellow]Warning: Checker {checker.name} failed for {repo.path}: {e}")
-            
+                    self.console.print(
+                        f"[yellow]Warning: Checker {checker.name} failed for {repo.path}: {e}"
+                    )
+
             # Generate report for this repository
             self._generate_repo_report(repo, result)
-            
+
         except Exception as e:
             result.error = str(e)
             self.console.print(f"[red]Error scanning {repo.path}: {e}")
-        
+
         return result
-    
+
     def scan_all(self) -> List[ScanResult]:
         """Scan all repositories and generate reports."""
         repos = self.find_git_repos()
-        
+
         if not repos:
             self.console.print("[yellow]No Git repositories found.")
             return []
-        
+
         self.console.print(f"[green]Found {len(repos)} repositories to scan.")
-        
+
         results: List[ScanResult] = []
-        
+
         # Create output directory if it doesn't exist
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Scan repositories in parallel
         with ThreadPoolExecutor(max_workers=self.jobs) as executor:
             futures = {executor.submit(self.scan_repo, repo): repo for repo in repos}
-            
+
             with Progress(
                 SpinnerColumn(),
                 "[progress.description]{task.description}",
@@ -323,7 +355,7 @@ class GitScanner:
                 console=self.console,
             ) as progress:
                 task = progress.add_task("Scanning repositories...", total=len(futures))
-                
+
                 for future in as_completed(futures):
                     repo = futures[future]
                     try:
@@ -335,44 +367,48 @@ class GitScanner:
                             _ = result.error
                             results.append(result)
                         except Exception as e:
-                            self.console.print(f"[red]Error processing result for {repo.path}: {e}")
+                            self.console.print(
+                                f"[red]Error processing result for {repo.path}: {e}"
+                            )
                             import traceback
+
                             traceback.print_exc()
                     except Exception as e:
                         self.console.print(f"[red]Error scanning {repo.path}: {e}")
                         import traceback
+
                         traceback.print_exc()
-                    
+
                     progress.update(task, advance=1, description=f"Scanned {repo.name}")
-        
+
         # Generate summary report
         self._generate_summary_report(results)
-        
+
         return results
-    
+
     def _generate_repo_report(self, repo: GitRepo, result: ScanResult) -> Path:
         """Generate a report for a single repository.
-        
+
         Args:
             repo: The Git repository
             result: Scan results for the repository
-            
+
         Returns:
             Path to the generated report
         """
         # Create output directory
-        output_dir = self.output_dir / (repo.org or '') / repo.name
+        output_dir = self.output_dir / (repo.org or "") / repo.name
         output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Verify directory was created and is writable
         if not output_dir.exists() or not os.access(output_dir, os.W_OK):
             raise OSError(f"Cannot write to output directory: {output_dir}")
-            
+
         # Generate report filename with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_filename = f"{timestamp}.html"
         report_path = output_dir / report_filename
-        
+
         # Prepare repository info
         has_errors = result.error is not None
         for check_result in result.results.values():
@@ -387,17 +423,28 @@ class GitScanner:
             elif hasattr(check_result, "is_ok") and not check_result.is_ok:
                 has_errors = True
                 break
-        
+
+        scan_since = self.since.strftime("%Y-%m-%d") if self.since else None
+        scan_command = None
+        if scan_since:
+            scan_command = f'weekly scan {self.root_dir} --since "{scan_since}" --output {self.output_dir}'
+        else:
+            scan_command = f"weekly scan {self.root_dir} --output {self.output_dir}"
+
         repo_info = RepoInfo(
             name=repo.name,
             org=repo.org,
             path=str(repo.path),
             branch=repo.branch,
             remote_url=repo.remote_url,
-            last_commit_date=repo.last_commit_date.isoformat() if repo.last_commit_date else None,
-            has_errors=has_errors
+            last_commit_date=repo.last_commit_date.isoformat()
+            if repo.last_commit_date
+            else None,
+            has_errors=has_errors,
+            scan_command=scan_command,
+            scan_since=scan_since,
         )
-        
+
         # Convert check results to the format expected by GitReportGenerator
         check_results: Dict[str, ReportCheckResult] = {}
         for name, check_result in result.results.items():
@@ -423,27 +470,27 @@ class GitScanner:
                     details=check_result.details,
                     next_steps=list(check_result.suggestions or []),
                     severity=severity,
-                    metadata=check_result.metadata  # Pass metadata directly
+                    metadata=check_result.metadata,  # Pass metadata directly
                 )
                 continue
 
             # Fallback for any other checker result interface
             check_results[name] = ReportCheckResult(
                 name=name,
-                description=getattr(check_result, 'description', ''),
-                is_ok=getattr(check_result, 'is_ok', False),
-                message=getattr(check_result, 'message', ''),
-                details=getattr(check_result, 'details', None),
-                next_steps=getattr(check_result, 'next_steps', []),
-                severity="high" if not getattr(check_result, 'is_ok', True) else "low",
-                metadata=getattr(check_result, 'metadata', None)
+                description=getattr(check_result, "description", ""),
+                is_ok=getattr(check_result, "is_ok", False),
+                message=getattr(check_result, "message", ""),
+                details=getattr(check_result, "details", None),
+                next_steps=getattr(check_result, "next_steps", []),
+                severity="high" if not getattr(check_result, "is_ok", True) else "low",
+                metadata=getattr(check_result, "metadata", None),
             )
-        
+
         # Add changelog information if available
         if result.change_summary:
             analyzer = GitChangeAnalyzer(repo.path)
             changelog_info = analyzer.generate_summary_report(result.change_summary)
-            
+
             # Add as a special check result
             check_results["changelog"] = ReportCheckResult(
                 name="changelog",
@@ -453,7 +500,7 @@ class GitScanner:
                 details=changelog_info,
                 next_steps=[
                     f"View full changelog: {output_dir}/changelog.md",
-                    "Review recent commits for potential issues"
+                    "Review recent commits for potential issues",
                 ],
                 severity="info",
                 metadata={
@@ -461,56 +508,66 @@ class GitScanner:
                     "files_changed": result.change_summary.total_files,
                     "additions": result.change_summary.total_additions,
                     "deletions": result.change_summary.total_deletions,
-                    "commit_types": result.change_summary.commit_types
-                }
+                    "commit_types": result.change_summary.commit_types,
+                    "changelog_path": result.changelog_path,
+                    "changelog_generator": result.changelog_generator,
+                    "changelog_excerpt": result.changelog_excerpt,
+                },
             )
-        
+
         # Generate the report
         GitReportGenerator.generate_html_report(
             results=check_results,
             repo_info=repo_info,
             output_path=report_path,
-            title=f"Weekly Report - {repo.org}/{repo.name}"
+            title=f"Weekly Report - {repo.org}/{repo.name}",
         )
-        
+
         # Create a symlink to the latest report
         latest_link = output_dir / "latest.html"
-        
+
         # Remove existing symlink if it exists
         if latest_link.exists() or latest_link.is_symlink():
             try:
                 latest_link.unlink()
                 self.console.print(f"[yellow]Removed existing symlink: {latest_link}")
             except OSError as e:
-                self.console.print(f"[yellow]Warning: Could not remove existing latest.html: {e}")
-        
+                self.console.print(
+                    f"[yellow]Warning: Could not remove existing latest.html: {e}"
+                )
+
         # Create new symlink
         try:
             # Use absolute path for the target to avoid any relative path issues
             target_path = report_path.absolute()
             latest_link.symlink_to(target_path)
-            self.console.print(f"[green]Created symlink: {latest_link} -> {target_path}")
+            self.console.print(
+                f"[green]Created symlink: {latest_link} -> {target_path}"
+            )
         except OSError as e:
-            self.console.print(f"[yellow]Warning: Could not create latest.html symlink: {e}")
+            self.console.print(
+                f"[yellow]Warning: Could not create latest.html symlink: {e}"
+            )
             import traceback
+
             traceback.print_exc()
-            
+
         return report_path
-    
-    def _generate_summary_report(self, results: List[ScanResult]) -> Path:
+
+    def _generate_summary_report(self, results: List[ScanResult]) -> Optional[Path]:
         """Generate a summary report for all repositories.
-        
+
         Args:
             results: List of scan results
-            
+
         Returns:
             Path to the generated summary report
         """
         if not results:
             return None
-            
+
         summary_path = self.output_dir / "summary.html"
-        
+
         # Prepare repository data for the summary
         repos_data: List[Dict[str, Any]] = []
         for result in results:
@@ -530,19 +587,27 @@ class GitScanner:
             # Generate the relative path to the repository's latest report
             rel_report_path = Path(result.repo.org) / result.repo.name / "latest.html"
 
-            repos_data.append({
-                "name": result.repo.name,
-                "org": result.repo.org,
-                "path": str(result.repo.path),
-                "branch": result.repo.branch,
-                "has_errors": has_errors,
-                "last_commit": result.repo.last_commit_date.strftime("%Y-%m-%d %H:%M") if result.repo.last_commit_date else "Unknown",
-                "report_path": str(rel_report_path),
-                "remote_url": result.repo.remote_url,
-            })
+            repos_data.append(
+                {
+                    "name": result.repo.name,
+                    "org": result.repo.org,
+                    "path": str(result.repo.path),
+                    "branch": result.repo.branch,
+                    "has_errors": has_errors,
+                    "last_commit": result.repo.last_commit_date.strftime(
+                        "%Y-%m-%d %H:%M"
+                    )
+                    if result.repo.last_commit_date
+                    else "Unknown",
+                    "report_path": str(rel_report_path),
+                    "remote_url": result.repo.remote_url,
+                }
+            )
 
         # Sort repos by organization and name
-        repos_data.sort(key=lambda x: (x.get("org", "").lower(), x.get("name", "").lower()))
+        repos_data.sort(
+            key=lambda x: (x.get("org", "").lower(), x.get("name", "").lower())
+        )
 
         GitReportGenerator.generate_summary_report(
             repos=repos_data,

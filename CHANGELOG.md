@@ -1,3 +1,32 @@
+## [0.1.36] - 2026-01-29
+
+### Summary
+
+feat(core): add cli, validation, api
+
+### Test
+
+- update tests/debug_parse_mypy.py
+- update tests/test_analyzer.py
+- update tests/test_cli.py
+- update tests/test_reporter.py
+- update tests/test_style_checker.py
+
+### Other
+
+- update weekly/__init__.py
+- update weekly/checkers/__init__.py
+- update weekly/checkers/base.py
+- update weekly/checkers/ci_cd.py
+- update weekly/checkers/code_quality.py
+- update weekly/checkers/dependencies.py
+- update weekly/checkers/docs.py
+- update weekly/checkers/style.py
+- update weekly/checkers/testing.py
+- update weekly/cli.py
+- ... and 9 more
+
+
 ## [0.1.35] - 2026-01-29
 
 ### Summary

@@ -2,28 +2,31 @@
 Git scanner report generation module for Weekly.
 """
 
+from __future__ import annotations
+
 import json
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
-from dataclasses import dataclass, asdict, field
+from typing import Any, Dict, List, Optional, Union
+
 
 class CheckResult:
     """Represents the result of a single check."""
-    
+
     def __init__(
         self,
         name: str,
         description: str,
         is_ok: bool,
         message: str,
-        details: Optional[Dict] = None,
+        details: Optional[Any] = None,
         next_steps: Optional[List[str]] = None,
         severity: str = "medium",
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         """Initialize a check result.
-        
+
         Args:
             name: Name of the check
             description: Description of the check
@@ -43,9 +46,11 @@ class CheckResult:
         self.severity = severity
         self.metadata = metadata or {}
 
+
 @dataclass
 class RepoInfo:
     """Repository information for reports."""
+
     name: str
     org: str = ""
     path: str = ""
@@ -53,19 +58,22 @@ class RepoInfo:
     remote_url: str = ""
     last_commit_date: Optional[str] = None
     has_errors: bool = False
+    scan_command: Optional[str] = None
+    scan_since: Optional[str] = None
+
 
 class GitReportGenerator:
     """Generates reports for Git repository scans."""
-    
+
     @staticmethod
     def generate_llm_report(
         results: Dict[str, CheckResult],
         repo_info: RepoInfo,
         output_path: Union[str, Path],
-        title: str = "Weekly Report - LLM Format"
+        title: str = "Weekly Report - LLM Format",
     ) -> None:
         """Generate an LLM-optimized Markdown report for code fixing.
-        
+
         Args:
             results: Dictionary of check results
             repo_info: Repository information
@@ -74,18 +82,24 @@ class GitReportGenerator:
         """
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Generate LLM-optimized Markdown content
         markdown_lines = []
-        
+
         # LLM-friendly header with clear instructions
         markdown_lines.append(f"# {title} - LLM Code Fixing Report")
         markdown_lines.append("")
         markdown_lines.append("## 🤖 LLM Instructions")
         markdown_lines.append("")
-        markdown_lines.append("**Your Role:** You are a Python code quality expert helping to fix issues systematically.")
-        markdown_lines.append("**Your Task:** Analyze the report below and provide a step-by-step fix plan.")
-        markdown_lines.append("**Priority Order:** Critical errors → Bulk formatting → Detailed fixes")
+        markdown_lines.append(
+            "**Your Role:** You are a Python code quality expert helping to fix issues systematically."
+        )
+        markdown_lines.append(
+            "**Your Task:** Analyze the report below and provide a step-by-step fix plan."
+        )
+        markdown_lines.append(
+            "**Priority Order:** Critical errors → Bulk formatting → Detailed fixes"
+        )
         markdown_lines.append("")
         markdown_lines.append("---")
         markdown_lines.append("")
@@ -94,121 +108,176 @@ class GitReportGenerator:
         markdown_lines.append(f"- **Project:** {repo_info.org}/{repo_info.name}")
         markdown_lines.append(f"- **Location:** `{repo_info.path}`")
         markdown_lines.append(f"- **Branch:** {repo_info.branch}")
-        markdown_lines.append(f"- **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        markdown_lines.append(
+            f"- **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        if repo_info.scan_since:
+            markdown_lines.append(f"- **Scan Since:** {repo_info.scan_since}")
+        if repo_info.scan_command:
+            markdown_lines.append("")
+            markdown_lines.append("## 🧾 Scan Invocation")
+            markdown_lines.append("")
+            markdown_lines.append("```bash")
+            markdown_lines.append(repo_info.scan_command)
+            markdown_lines.append("```")
         markdown_lines.append("")
         markdown_lines.append("---")
         markdown_lines.append("")
-        
+
         # Collect all issues by file
-        issues_by_file = {}
-        bulk_issues = {}
-        changelog_info = None
-        
+        repo_prefix = repo_info.path.rstrip("/") + "/"
+        issues_by_file: Dict[str, List[Dict[str, Any]]] = {}
+        bulk_issues: Dict[str, List[Dict[str, Any]]] = {}
+        changelog_info: Optional[Dict[str, Any]] = None
+
         for name, result in results.items():
             if name == "changelog" and result.metadata:
                 changelog_info = result.metadata
                 continue
-                
-            if result.metadata and 'issues_data' in result.metadata:
-                issues_data = result.metadata['issues_data']
-                
+
+            if result.metadata and "issues_data" in result.metadata:
+                issues_data = result.metadata["issues_data"]
+
                 for tool, issues in issues_data.items():
                     if tool not in bulk_issues:
                         bulk_issues[tool] = []
-                    
+
                     # Group issues by file
                     for issue in issues:
-                        file_path = issue['file']
+                        file_path = issue["file"]
                         if file_path not in issues_by_file:
                             issues_by_file[file_path] = []
-                        issues_by_file[file_path].append({
-                            **issue,
-                            'tool': tool
-                        })
+                        issues_by_file[file_path].append({**issue, "tool": tool})
                         bulk_issues[tool].append(issue)
-        
+
         # Add changelog section if available
         if changelog_info:
             markdown_lines.append("## 📈 Recent Changes")
             markdown_lines.append("")
-            markdown_lines.append(f"**Commits in the last period:** {changelog_info.get('total_commits', 0)}")
-            markdown_lines.append(f"**Files modified:** {changelog_info.get('files_changed', 0)}")
-            markdown_lines.append(f"**Lines added:** {changelog_info.get('additions', 0)}")
-            markdown_lines.append(f"**Lines removed:** {changelog_info.get('deletions', 0)}")
+            markdown_lines.append(
+                f"**Commits in the last period:** {changelog_info.get('total_commits', 0)}"
+            )
+            markdown_lines.append(
+                f"**Files modified:** {changelog_info.get('files_changed', 0)}"
+            )
+            markdown_lines.append(
+                f"**Lines added:** {changelog_info.get('additions', 0)}"
+            )
+            markdown_lines.append(
+                f"**Lines removed:** {changelog_info.get('deletions', 0)}"
+            )
             markdown_lines.append("")
-            
-            commit_types = changelog_info.get('commit_types', {})
+
+            if changelog_info.get("changelog_generator"):
+                markdown_lines.append(
+                    f"**Changelog generator:** `{changelog_info.get('changelog_generator')}`"
+                )
+            if changelog_info.get("changelog_path"):
+                markdown_lines.append(
+                    f"**Changelog path:** `{changelog_info.get('changelog_path')}`"
+                )
+            if changelog_info.get("changelog_generator") or changelog_info.get(
+                "changelog_path"
+            ):
+                markdown_lines.append("")
+
+            commit_types = changelog_info.get("commit_types", {})
             if commit_types:
                 markdown_lines.append("**Commit types:**")
-                for c_type, count in sorted(commit_types.items(), key=lambda x: x[1], reverse=True):
+                for c_type, count in sorted(
+                    commit_types.items(), key=lambda x: x[1], reverse=True
+                ):
                     emoji = {
-                        'feat': '✨',
-                        'fix': '🐛',
-                        'refactor': '♻️',
-                        'docs': '📚',
-                        'style': '💄',
-                        'test': '✅',
-                        'chore': '🔧',
-                        'perf': '⚡',
-                        'ci': '👷',
-                        'build': '📦',
-                        'other': '📝'
-                    }.get(c_type, '📝')
+                        "feat": "✨",
+                        "fix": "🐛",
+                        "refactor": "♻️",
+                        "docs": "📚",
+                        "style": "💄",
+                        "test": "✅",
+                        "chore": "🔧",
+                        "perf": "⚡",
+                        "ci": "👷",
+                        "build": "📦",
+                        "other": "📝",
+                    }.get(c_type, "📝")
                     markdown_lines.append(f"- {emoji} {c_type.title()}: {count}")
                 markdown_lines.append("")
-            
-            markdown_lines.append("**📝 View full changelog:** `changelog.md` in the report directory")
+
+            markdown_lines.append(
+                "**📝 View full changelog:** `changelog.md` in the report directory"
+            )
             markdown_lines.append("")
+
+            excerpt = changelog_info.get("changelog_excerpt")
+            if excerpt:
+                markdown_lines.append("**Changelog excerpt (first lines):**")
+                markdown_lines.append("```text")
+                markdown_lines.append(str(excerpt).rstrip())
+                markdown_lines.append("```")
+                markdown_lines.append("")
+
             markdown_lines.append("---")
             markdown_lines.append("")
-        
+
         # Priority 1: Critical errors (non-formatting)
         markdown_lines.append("## 🚨 Priority 1: Critical Errors")
         markdown_lines.append("")
-        markdown_lines.append("*These errors must be fixed manually before formatting.*")
+        markdown_lines.append(
+            "*These errors must be fixed manually before formatting.*"
+        )
         markdown_lines.append("")
         critical_found = False
         critical_count = 0
-        
+
         for file_path in sorted(issues_by_file.keys()):
             file_issues = issues_by_file[file_path]
-            critical_issues = [i for i in file_issues if i['tool'] != 'black' and i['code'] != 'BLK100']
-            
-            if critical_issues:
+            critical_file_issues = [
+                i for i in file_issues if i["tool"] != "black" and i["code"] != "BLK100"
+            ]
+
+            if critical_file_issues:
                 critical_found = True
-                critical_count += len(critical_issues)
+                critical_count += len(critical_file_issues)
                 markdown_lines.append(f"### 📄 File: `{file_path}`")
                 markdown_lines.append("")
-                
-                for issue in sorted(critical_issues, key=lambda x: x['line']):
-                    markdown_lines.append(f"**Line {issue['line']}:** `{issue['code']}` - {issue['message']}")
+
+                for issue in sorted(critical_file_issues, key=lambda x: x["line"]):
+                    markdown_lines.append(
+                        f"**Line {issue['line']}:** `{issue['code']}` - {issue['message']}"
+                    )
                     markdown_lines.append(f"- **Tool:** {issue['tool']}")
-                    markdown_lines.append(f"- **Command:** `{issue['tool'].lower()} {file_path}`")
+                    markdown_lines.append(
+                        f"- **Command:** `{issue['tool'].lower()} {file_path}`"
+                    )
                     markdown_lines.append("")
-        
+
         if not critical_found:
             markdown_lines.append("✅ **No critical errors found.**")
             markdown_lines.append("")
         else:
             markdown_lines.append(f"**Total Critical Errors:** {critical_count}")
             markdown_lines.append("")
-        
+
         # Priority 2: Bulk formatting issues
         markdown_lines.append("## 📝 Priority 2: Bulk Formatting Issues")
         markdown_lines.append("")
-        markdown_lines.append("*These can be fixed automatically with a single command.*")
+        markdown_lines.append(
+            "*These can be fixed automatically with a single command.*"
+        )
         markdown_lines.append("")
-        
+
         for tool, issues in bulk_issues.items():
-            if tool.lower() in ['black', 'isort'] and len(issues) > 5:
+            if tool.lower() in ["black", "isort"] and len(issues) > 5:
                 tool_name = tool.upper()
                 file_count = len(issues)
-                
-                markdown_lines.append(f"### {tool_name} Formatting ({file_count} files)")
+
+                markdown_lines.append(
+                    f"### {tool_name} Formatting ({file_count} files)"
+                )
                 markdown_lines.append("")
                 markdown_lines.append("**Affected Files (showing first 10):**")
                 for issue in issues[:10]:
-                    rel_path = issue['file'].replace('/home/tom/github/exef-pl/app/', '')
+                    rel_path = str(issue.get("file", "")).replace(repo_prefix, "")
                     markdown_lines.append(f"- `{rel_path}`")
                 if len(issues) > 10:
                     markdown_lines.append(f"- ... and {len(issues) - 10} more files")
@@ -218,12 +287,14 @@ class GitReportGenerator:
                 markdown_lines.append(f"cd {repo_info.path} && {tool.lower()} .")
                 markdown_lines.append("```")
                 markdown_lines.append("")
-                
+
                 # Add safety note
-                if tool.lower() == 'black':
-                    markdown_lines.append("⚠️ **Note:** Black will reformat your code. Review changes before committing.")
+                if tool.lower() == "black":
+                    markdown_lines.append(
+                        "⚠️ **Note:** Black will reformat your code. Review changes before committing."
+                    )
                     markdown_lines.append("")
-        
+
         # Priority 3: Detailed issues by file (limited)
         markdown_lines.append("## 📋 Priority 3: Individual File Issues")
         markdown_lines.append("")
@@ -231,72 +302,91 @@ class GitReportGenerator:
         markdown_lines.append("")
         markdown_lines.append(f"*Showing first 20 files with non-formatting issues*")
         markdown_lines.append("")
-        
+
         file_count = 0
         for file_path in sorted(issues_by_file.keys()):
             if file_count >= 20:
                 break
-                
+
             file_issues = issues_by_file[file_path]
             # Skip if only has formatting issues
-            if all(i['tool'].lower() in ['black', 'isort'] for i in file_issues):
+            if all(i["tool"].lower() in ["black", "isort"] for i in file_issues):
                 continue
-                
+
             file_count += 1
-            rel_path = file_path.replace('/home/tom/github/exef-pl/app/', '')
+            rel_path = file_path.replace(repo_prefix, "")
             markdown_lines.append(f"### 📄 File: `{rel_path}`")
             markdown_lines.append("")
-            
+
             # Group issues by line for better context
-            issues_by_line = {}
+            issues_by_line: Dict[int, List[Dict[str, Any]]] = {}
             for issue in file_issues:
-                if issue['tool'].lower() in ['black', 'isort']:
+                if issue["tool"].lower() in ["black", "isort"]:
                     continue
-                line = issue['line']
+                line = issue["line"]
                 if line not in issues_by_line:
                     issues_by_line[line] = []
                 issues_by_line[line].append(issue)
-            
+
             if issues_by_line:
                 for line in sorted(issues_by_line.keys()):
                     line_issues = issues_by_line[line]
                     for issue in line_issues:
-                        markdown_lines.append(f"**Line {line}:** `{issue['code']}` - {issue['message']}")
+                        markdown_lines.append(
+                            f"**Line {line}:** `{issue['code']}` - {issue['message']}"
+                        )
                         markdown_lines.append(f"- **Tool:** {issue['tool']}")
                         markdown_lines.append("")
             else:
                 markdown_lines.append("*Only formatting issues (see Priority 2)*")
                 markdown_lines.append("")
-        
+
         if file_count == 0:
-            markdown_lines.append("✅ **No individual file issues found beyond formatting.**")
+            markdown_lines.append(
+                "✅ **No individual file issues found beyond formatting.**"
+            )
             markdown_lines.append("")
-        
+
         # Summary and next steps
         markdown_lines.append("---")
         markdown_lines.append("")
         markdown_lines.append("## 📊 Issue Summary")
         markdown_lines.append("")
         total_issues = sum(len(issues) for issues in bulk_issues.values())
-        critical_issues = sum(len([i for i in issues if i.get('tool', '').lower() not in ['black', 'isort']]) for issues in bulk_issues.values())
-        formatting_issues = total_issues - critical_issues
-        
+        critical_issue_count = sum(
+            len(
+                [
+                    i
+                    for i in issues
+                    if i.get("tool", "").lower() not in ["black", "isort"]
+                ]
+            )
+            for issues in bulk_issues.values()
+        )
+        formatting_issues = total_issues - critical_issue_count
+
         markdown_lines.append(f"- **Total Issues:** {total_issues}")
-        markdown_lines.append(f"- **Critical Errors:** {critical_issues}")
+        markdown_lines.append(f"- **Critical Errors:** {critical_issue_count}")
         markdown_lines.append(f"- **Formatting Issues:** {formatting_issues}")
         markdown_lines.append(f"- **Files Affected:** {len(issues_by_file)}")
         markdown_lines.append("")
-        
+
         markdown_lines.append("## 🎯 LLM Action Plan")
         markdown_lines.append("")
         markdown_lines.append("Please provide:")
         markdown_lines.append("")
-        markdown_lines.append("1. **Risk Assessment** - Any potential issues with automated fixes?")
-        markdown_lines.append("2. **Step-by-Step Plan** - Exact commands to run in order")
+        markdown_lines.append(
+            "1. **Risk Assessment** - Any potential issues with automated fixes?"
+        )
+        markdown_lines.append(
+            "2. **Step-by-Step Plan** - Exact commands to run in order"
+        )
         markdown_lines.append("3. **Verification Steps** - How to confirm fixes worked")
-        markdown_lines.append("4. **Backup Strategy** - Should we create a backup first?")
+        markdown_lines.append(
+            "4. **Backup Strategy** - Should we create a backup first?"
+        )
         markdown_lines.append("")
-        
+
         markdown_lines.append("### Suggested Workflow:")
         markdown_lines.append("")
         markdown_lines.append("```bash")
@@ -313,39 +403,47 @@ class GitReportGenerator:
         markdown_lines.append("# 4. Review and commit")
         markdown_lines.append("git diff --stat")
         markdown_lines.append("git add .")
-        markdown_lines.append("git commit -m 'fix: apply code formatting and linting fixes'")
+        markdown_lines.append(
+            "git commit -m 'fix: apply code formatting and linting fixes'"
+        )
         markdown_lines.append("```")
         markdown_lines.append("")
-        
+
         markdown_lines.append("### Next Steps for LLM:")
         markdown_lines.append("")
         markdown_lines.append("- [ ] Confirm the workflow above is safe")
         markdown_lines.append("- [ ] Identify any files that need manual review")
         markdown_lines.append("- [ ] Suggest testing procedures")
-        markdown_lines.append("- [ ] Recommend prevention strategies (e.g., pre-commit hooks)")
+        markdown_lines.append(
+            "- [ ] Recommend prevention strategies (e.g., pre-commit hooks)"
+        )
         markdown_lines.append("")
-        
+
         # Footer
         markdown_lines.append("---")
         markdown_lines.append("")
-        markdown_lines.append("*This LLM-optimized report was generated by Weekly tool*")
-        markdown_lines.append(f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
+        markdown_lines.append(
+            "*This LLM-optimized report was generated by Weekly tool*"
+        )
+        markdown_lines.append(
+            f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"
+        )
         markdown_lines.append("")
         markdown_lines.append("**End of Report**")
-        
+
         # Write to file
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(markdown_lines))
-    
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(markdown_lines))
+
     @staticmethod
     def generate_markdown_report(
         results: Dict[str, CheckResult],
         repo_info: RepoInfo,
         output_path: Union[str, Path],
-        title: str = "Weekly Git Report"
+        title: str = "Weekly Git Report",
     ) -> None:
         """Generate a Markdown report for a repository scan.
-        
+
         Args:
             results: Dictionary of check results
             repo_info: Repository information
@@ -354,51 +452,61 @@ class GitReportGenerator:
         """
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Generate Markdown content
         markdown_lines = []
-        
+
         # Header
         markdown_lines.append(f"# {title}")
         markdown_lines.append("")
-        markdown_lines.append(f"**Generated on:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        markdown_lines.append(
+            f"**Generated on:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         markdown_lines.append("")
-        
+
         # Repository info
         markdown_lines.append("## Repository Information")
         markdown_lines.append("")
         markdown_lines.append(f"- **Name:** {repo_info.org}/{repo_info.name}")
         markdown_lines.append(f"- **Branch:** {repo_info.branch}")
         markdown_lines.append(f"- **Path:** {repo_info.path}")
-        markdown_lines.append(f"- **Status:** {'✅ All checks passed' if not any(not result.is_ok for result in results.values()) else '❌ Issues found'}")
+        markdown_lines.append(
+            f"- **Status:** {'✅ All checks passed' if not any(not result.is_ok for result in results.values()) else '❌ Issues found'}"
+        )
         markdown_lines.append("")
-        
+
         # Check results
         markdown_lines.append("## Check Results")
         markdown_lines.append("")
-        
+
         for name, result in results.items():
             status_icon = "✅" if result.is_ok else "❌"
             markdown_lines.append(f"### {status_icon} {name.title()}")
             markdown_lines.append("")
             markdown_lines.append(f"**Status:** {result.message}")
             markdown_lines.append("")
-            
+
             # Add detailed issues if available
-            if result.metadata and 'issues_data' in result.metadata:
-                issues_data = result.metadata['issues_data']
-                
+            if result.metadata and "issues_data" in result.metadata:
+                issues_data = result.metadata["issues_data"]
+
                 for tool, issues in issues_data.items():
-                    markdown_lines.append(f"#### {tool.upper()} Issues ({len(issues)} total)")
+                    markdown_lines.append(
+                        f"#### {tool.upper()} Issues ({len(issues)} total)"
+                    )
                     markdown_lines.append("")
-                    
+
                     for issue in issues:
-                        markdown_lines.append(f"- **File:** `{issue['file']}:{issue['line']}`")
+                        markdown_lines.append(
+                            f"- **File:** `{issue['file']}:{issue['line']}`"
+                        )
                         markdown_lines.append(f"  - **Code:** `{issue['code']}`")
                         markdown_lines.append(f"  - **Message:** {issue['message']}")
-                        markdown_lines.append(f"  - **Fix:** Run `{tool.lower()}` to fix this issue")
+                        markdown_lines.append(
+                            f"  - **Fix:** Run `{tool.lower()}` to fix this issue"
+                        )
                         markdown_lines.append("")
-            
+
             # Add next steps if available
             if result.next_steps:
                 markdown_lines.append("**Next Steps:**")
@@ -406,27 +514,29 @@ class GitReportGenerator:
                 for step in result.next_steps:
                     markdown_lines.append(f"- {step}")
                 markdown_lines.append("")
-            
+
             markdown_lines.append("---")
             markdown_lines.append("")
-        
+
         # Footer
         markdown_lines.append("---")
-        markdown_lines.append(f"*Report generated by Weekly - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
-        
+        markdown_lines.append(
+            f"*Report generated by Weekly - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"
+        )
+
         # Write to file
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(markdown_lines))
-    
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(markdown_lines))
+
     @staticmethod
     def generate_html_report(
         results: Dict[str, CheckResult],
         repo_info: RepoInfo,
         output_path: Union[str, Path],
-        title: str = "Weekly Git Report"
+        title: str = "Weekly Git Report",
     ) -> None:
         """Generate an HTML report for a repository scan.
-        
+
         Args:
             results: Dictionary of check results
             repo_info: Repository information
@@ -435,48 +545,55 @@ class GitReportGenerator:
         """
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Prepare the context
         context = {
             "title": title,
             "repo_info": asdict(repo_info),
-            "results": [{
-                "name": name,
-                "description": result.description,
-                "is_ok": result.is_ok,
-                "message": result.message,
-                "details": result.metadata if result.metadata else result.details,
-                "next_steps": result.next_steps,
-                "severity": result.severity
-            } for name, result in results.items()],
+            "results": [
+                {
+                    "name": name,
+                    "description": result.description,
+                    "is_ok": result.is_ok,
+                    "message": result.message,
+                    "details": result.metadata if result.metadata else result.details,
+                    "next_steps": result.next_steps,
+                    "severity": result.severity,
+                }
+                for name, result in results.items()
+            ],
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "has_errors": any(not result.is_ok for result in results.values())
+            "has_errors": any(not result.is_ok for result in results.values()),
         }
-        
+
         # Generate both Markdown and LLM-optimized reports
-        md_output_path = output_path.with_suffix('.md')
-        GitReportGenerator.generate_markdown_report(results, repo_info, md_output_path, title)
-        
-        llm_output_path = output_path.with_suffix('.llm.md')
-        GitReportGenerator.generate_llm_report(results, repo_info, llm_output_path, title)
-        
+        md_output_path = output_path.with_suffix(".md")
+        GitReportGenerator.generate_markdown_report(
+            results, repo_info, md_output_path, title
+        )
+
+        llm_output_path = output_path.with_suffix(".llm.md")
+        GitReportGenerator.generate_llm_report(
+            results, repo_info, llm_output_path, title
+        )
+
         # Generate the HTML
         html = GitReportGenerator._render_html_template("repo_report.html", context)
-        
+
         # Write to file
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(html)
-    
+
     @staticmethod
     def generate_summary_report(
         repos: List[Dict[str, Any]],
         output_path: Union[str, Path],
         title: str = "Weekly Scan Summary",
         scan_date: Optional[str] = None,
-        since_date: Optional[str] = None
+        since_date: Optional[str] = None,
     ) -> None:
         """Generate a summary HTML report for multiple repositories.
-        
+
         Args:
             repos: List of repository information dictionaries
             output_path: Path to save the HTML report
@@ -486,50 +603,50 @@ class GitReportGenerator:
         """
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Prepare the context
         context = {
             "title": title,
             "repos": repos,
             "scan_date": scan_date or datetime.now().strftime("%Y-%m-%d"),
             "since_date": since_date,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
-        
+
         # Generate the HTML
         html = GitReportGenerator._render_html_template("summary_report.html", context)
-        
+
         # Write to file
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(html)
-    
+
     @staticmethod
     def _render_html_template(template_name: str, context: Dict[str, Any]) -> str:
         """Render an HTML template with the given context.
-        
+
         Args:
             template_name: Name of the template file
             context: Dictionary of template variables
-            
+
         Returns:
             Rendered HTML as a string
         """
         # This is a simplified version - in a real implementation, you would use a templating engine
         # like Jinja2 with proper template files
-        
+
         if template_name == "repo_report.html":
             return GitReportGenerator._render_repo_report(context)
         elif template_name == "summary_report.html":
             return GitReportGenerator._render_summary_report(context)
         else:
             raise ValueError(f"Unknown template: {template_name}")
-    
+
     @staticmethod
     def _render_repo_report(context: Dict[str, Any]) -> str:
         """Render the repository report template."""
         repo_info = context["repo_info"]
         results = context["results"]
-        
+
         # Status badge
         status_badge = """
         <div class="status-badge">
@@ -537,29 +654,36 @@ class GitReportGenerator:
         </div>
         """.format(
             badge_class="badge-success" if not context["has_errors"] else "badge-error",
-            status_text="All checks passed" if not context["has_errors"] else "Issues found"
+            status_text="All checks passed"
+            if not context["has_errors"]
+            else "Issues found",
         )
-        
+
         # Results table
         results_table = ""
         for result in results:
             status_icon = "✓" if result["is_ok"] else "✗"
             status_class = "success" if result["is_ok"] else "error"
-            
+
             # Format details with better structure
             details = ""
             if result["details"]:
                 # Check if details is a dictionary with issues_data
-                if isinstance(result["details"], dict) and 'issues_data' in result["details"]:
+                if (
+                    isinstance(result["details"], dict)
+                    and "issues_data" in result["details"]
+                ):
                     # This is from style checker with full issue data
-                    issues_data = result["details"]['issues_data']
+                    issues_data = result["details"]["issues_data"]
                     details_html = "<div class='issue-list'>"
-                    
+
                     for tool, issues in issues_data.items():
                         details_html += f"<div class='tool-section'>"
                         details_html += f"<div class='tool-header'>{tool.upper()} - {len(issues)} issues</div>"
-                        
-                        for issue in issues[:100]:  # Limit to first 100 issues per tool for performance
+
+                        for issue in issues[
+                            :100
+                        ]:  # Limit to first 100 issues per tool for performance
                             details_html += f"""
                             <div class='issue-item'>
                                 <div class='issue-file'>{issue['file']}:{issue['line']}</div>
@@ -569,22 +693,26 @@ class GitReportGenerator:
                                 </div>
                             </div>
                             """
-                        
+
                         if len(issues) > 100:
                             details_html += f"<div style='text-align: center; padding: 10px; color: #666;'>... and {len(issues) - 100} more issues</div>"
-                        
+
                         details_html += "</div>"
-                    
+
                     details_html += "</div>"
                     details = details_html
                 else:
                     # Fallback to pre-formatted text
                     details = f"<pre>{result['details']}</pre>"
-            
+
             next_steps = ""
             if result["next_steps"]:
-                next_steps = "<ul>" + "".join(f"<li>{step}</li>" for step in result["next_steps"]) + "</ul>"
-            
+                next_steps = (
+                    "<ul>"
+                    + "".join(f"<li>{step}</li>" for step in result["next_steps"])
+                    + "</ul>"
+                )
+
             results_table += f"""
             <tr class="{status_class}">
                 <td>{result['name']}</td>
@@ -593,7 +721,7 @@ class GitReportGenerator:
                 <td>{next_steps}</td>
             </tr>
             """
-        
+
         # Full HTML
         return f"""
         <!DOCTYPE html>
@@ -719,18 +847,18 @@ class GitReportGenerator:
         </body>
         </html>
         """
-    
+
     @staticmethod
     def _render_summary_report(context: Dict[str, Any]) -> str:
         """Render the summary report template."""
         repos = context["repos"]
-        
+
         # Repo cards
         repo_cards = ""
         for repo in repos:
             status_icon = "✓" if not repo.get("has_errors", False) else "✗"
             status_class = "success" if not repo.get("has_errors", False) else "error"
-            
+
             repo_cards += f"""
             <div class="repo-card">
                 <h3>{repo['name']} <span class="status-icon {status_class}">{status_icon}</span></h3>
@@ -739,7 +867,7 @@ class GitReportGenerator:
                 <p><a href="{repo.get('report_path', '#')}">View full report →</a></p>
             </div>
             """
-        
+
         # Full HTML
         return f"""
         <!DOCTYPE html>
