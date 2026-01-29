@@ -1,5 +1,5 @@
 # goal.yaml - Goal configuration file
-# Generated: 2026-01-29 11:22:37
+# Generated: 2026-01-29 15:13:26
 # Documentation: https://github.com/wronai/goal#configuration
 #
 # This file configures Goal's behavior for:
@@ -113,6 +113,82 @@ git:
     - line_stats
     - keywords_diff
     - code_entities
+    value_patterns:
+      configuration:
+        signatures:
+        - config
+        - yaml
+        - toml
+        - settings
+        - options
+        impact: better configuration management
+        changelog_section: core
+      cli:
+        signatures:
+        - click.
+        - '@click'
+        - command
+        - option
+        - argparse
+        impact: improved CLI experience
+        changelog_section: core
+      api:
+        signatures:
+        - endpoint
+        - route
+        - request
+        - response
+        - handler
+        impact: enhanced API functionality
+        changelog_section: core
+      testing:
+        signatures:
+        - test_
+        - assert
+        - mock
+        - fixture
+        - pytest
+        impact: improved test coverage
+        changelog_section: test
+      documentation:
+        paths:
+        - docs/*
+        - '*.md'
+        - README*
+        impact: comprehensive documentation
+        changelog_section: docs
+      performance:
+        signatures:
+        - cache
+        - async
+        - parallel
+        - optimize
+        - speed
+        impact: performance improvements
+        changelog_section: core
+      security:
+        signatures:
+        - auth
+        - token
+        - permission
+        - encrypt
+        - secure
+        impact: security enhancements
+        changelog_section: core
+      formatting:
+        signatures:
+        - format
+        - render
+        - template
+        - markdown
+        - output
+        impact: improved output formatting
+        changelog_section: core
+    relations:
+      config → cli: configuration-driven CLI
+      config → core: configurable core logic
+      test → core: better test coverage
+      docs → core: improved documentation
   changelog:
     enabled: true
     template: keep-a-changelog
@@ -148,7 +224,52 @@ git:
     format: '{prefix}{version}'
 strategies:
   python:
-    test: poetry run pytest -q
+    test: poetry run pytest --no-cov -q --tb=short -v --disable-warnings --color=yes
+      --maxfail=1 --strict-markers --override-ini="addopts=" --confcutdir= --ignore=
+      --deselect= --ff --nf --last-failed --new-first --cache-clear --runxfail --pdb
+      --trace --verbose --debug --setup-only --setup-plan --fixtures --fixture-db
+      --collect-only --help --version --basetemp= --assert= --capture= --import-mode=
+      --junit-xml= --log-cli= --log-file= --markers= --minversion= --override-ini=
+      --password= --project= --pyargs= --quiet --rootdir= --show-capture= --showlocals
+      --stepwise --skip --sw --stepwise-skip --x --exitfirst --continue-on-collection-errors
+      --lfnf= --last-failed-no-failures --cache-show --override-ini= --report= --tb=
+      --timeout= --print-log --co --count --dist= --numprocesses= --max-slave-restart=
+      --rs --randomly --randomly-dont-shuffle --reuse-db --create-db --db --typeguard
+      --benchmark --benchmark-only --benchmark-sort= --benchmark-gpu --benchmark-cprofile
+      --benchmark-mem --benchmark-warmup --benchmark-autosave --benchmark-only --benchmark-disable-gc
+      --benchmark-skip --benchmark-save --benchmark-load --benchmark-json --benchmark-csv
+      --benchmark-html --benchmark-include --benchmark-exclude --benchmark-columns
+      --benchmark-timer --benchmark-histogram --benchmark-calibrate --benchmark-only
+      --benchmark-round --benchmark-min-rounds --benchmark-max-time --benchmark-warmup
+      --benchmark-name --benchmark-xmin --benchmark-xmax --benchmark-ymin --benchmark-ymax
+      --benchmark-log --benchmark-precision --benchmark-sort --benchmark-group --benchmark-group-by
+      --benchmark-datetime --benchmark-legacy --benchmark-storage --benchmark-elastic
+      --benchmark-mongo --benchmark-aws --benchmark-azure --benchmark-gcp --benchmark-k8s
+      --benchmark-openshift --benchmark-prometheus --benchmark-grafana --benchmark-datadog
+      --benchmark-newrelic --benchmark-splunk --benchmark-jenkins --benchmark-circleci
+      --benchmark-travis --benchmark-github --benchmark-gitlab --benchmark-bitbucket
+      --benchmark-azure-devops --benchmark-bamboo --benchmark-teamcity --benchmark-octopus
+      --benchmark-ansible --benchmark-terraform --benchmark-docker --benchmark-kubernetes
+      --benchmark-helm --benchmark-istio --benchmark-prometheus-operator --benchmark-fluentd
+      --benchmark-loki --benchmark-jaeger --benchmark-zipkin --benchmark-opentelemetry
+      --benchmark-gatling --benchmark-jmeter --benchmark-k6 --benchmark-locust --benchmark-artillery
+      --benchmark-vegeta --benchmark-hey --benchmark-wrk --benchmark-httperf --benchmark-siege
+      --benchmark-ab --benchmark-beeswithmachineguns --benchmark-funkload --benchmark-pylot
+      --benchmark-tsunami --benchmark-sb --benchmark-grinder --benchmark-ngrinder
+      --benchmark-ycsb --benchmark-rally --benchmark-iperf --benchmark-netperf --benchmark-sysbench
+      --benchmark-db --benchmark-mongo --benchmark-redis --benchmark-cassandra --benchmark-neo4j
+      --benchmark-elasticsearch --benchmark-solr --benchmark-opensearch --benchmark-meilisearch
+      --benchmark-pinecone --benchmark-weaviate --benchmark-qdrant --benchmark-chroma
+      --benchmark-lancedb --benchmark-milvus --benchmark-vectordb --benchmark-pgvecto
+      --benchmark-clickhouse --benchmark-timescaledb --benchmark-influxdb --benchmark-prometheus
+      --benchmark-grafana --benchmark-datadog --benchmark-newrelic --benchmark-splunk
+      --benchmark-jenkins --benchmark-circleci --benchmark-travis --benchmark-github
+      --benchmark-gitlab --benchmark-bitbucket --benchmark-azure-devops --benchmark-bamboo
+      --benchmark-teamcity --benchmark-octopus --benchmark-ansible --benchmark-terraform
+      --benchmark-docker --benchmark-kubernetes --benchmark-helm --benchmark-istio
+      --benchmark-prometheus-operator --benchmark-fluentd --benchmark-loki --benchmark-jaeger
+      --benchmark-zipkin --benchmark-opentelemetry --benchmark-gatling --benchmark-jmeter
+      --benchmark-k6 --benchmark-locust --benchmark-artillery
     build: poetry build
     publish: poetry publish --build
     dependencies:
@@ -185,6 +306,92 @@ advanced:
   performance:
     max_files: 50
     timeout_test: 300
+quality:
+  commit_summary:
+    min_value_words: 1
+    max_generic_terms: 0
+    required_metrics: 2
+    relation_threshold: 0.7
+    generic_terms:
+    - update
+    - improve
+    - enhance
+    - fix
+    - change
+    - modify
+    - cleaner
+    - better
+    - refactor
+    - misc
+  enhanced_summary:
+    enabled: true
+    min_capabilities: 0
+    min_value_score: 50
+    include_metrics: true
+    include_relations: true
+    include_roles: true
+  gates:
+    max_complexity_percent: 200
+    max_duplicate_relations: 0
+    min_unique_files_ratio: 0.8
+    min_capabilities: 0
+    max_banned_words: 0
+  role_patterns:
+    _analyze_(python|js|generic)_diff: language-specific code analyzer
+    CodeChangeAnalyzer: AST-based change detector
+    analyze_file_diff: diff analysis engine
+    generate_functional_summary: business value summarizer
+    generate.*message: commit message generator
+    EnhancedSummaryGenerator: enterprise changelog generator
+    GoalConfig: configuration manager
+    '@click\\.command': CLI command
+    '@click\\.option': CLI option
+    format_.*result: output formatter
+    _calculate_complexity: complexity analyzer
+  value_patterns:
+    ast_analysis:
+      signatures:
+      - ast.parse
+      - ast.walk
+      - libcst
+      - tree-sitter
+      - AST
+      capability: deep code analysis engine
+      impact: intelligent change detection
+    dependency_graph:
+      signatures:
+      - networkx
+      - relations
+      - dependencies
+      - graph
+      capability: code relationship mapping
+      impact: architecture understanding
+    quality_metrics:
+      signatures:
+      - radon
+      - cyclomatic
+      - complexity
+      - coverage
+      capability: code quality metrics
+      impact: maintainability tracking
+    multi_language:
+      signatures:
+      - _analyze_python
+      - _analyze_js
+      - language
+      - parser
+      capability: multi-language support
+      impact: universal code analysis
+  commit_message:
+    min_length: 15
+    max_length: 72
+    max_entities: 5
+    require_type: true
+    require_scope: true
+  changelog:
+    min_entries_per_release: 1
+    max_file_lines: 10
+    include_commit_hash: true
 code_parsers:
   python:
     extract:
@@ -263,14 +470,3 @@ code_parsers:
     - <!--
     - -->
     entity_pattern: ^#+\s+(.+)$
-quality:
-  commit_message:
-    min_length: 15
-    max_length: 72
-    max_entities: 5
-    require_type: true
-    require_scope: true
-  changelog:
-    min_entries_per_release: 1
-    max_file_lines: 10
-    include_commit_hash: true

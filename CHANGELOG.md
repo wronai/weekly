@@ -1,3 +1,18 @@
+## [0.1.37] - 2026-01-29
+
+### Summary
+
+feat(goal): deep code analysis engine with 7 supporting modules
+
+### Test
+
+- update test_change.py
+
+### Config
+
+- config: update goal.yaml
+
+
 ## [0.1.36] - 2026-01-29
 
 ### Summary
