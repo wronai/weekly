@@ -1,5 +1,27 @@
 # Przykład użycia raportu LLM do naprawy kodu
 
+## Jak wygenerować raport LLM
+
+Raport LLM jest generowany automatycznie przy `weekly scan` jako plik `*.llm.md` obok standardowego `*.html` i `*.md`.
+
+Przykład:
+
+```bash
+weekly scan ~/github --since "30 days ago" --output ./weekly-reports
+```
+
+Następnie dla konkretnego repozytorium szukaj plików:
+
+- `weekly-reports/<org>/<repo>/<timestamp>.llm.md`
+- `weekly-reports/<org>/<repo>/changelog.md`
+
+## Recent Changes + changelog.md
+
+Jeśli używasz `--since`, raport per-repo zawiera sekcję **Recent Changes** oraz zapisuje `changelog.md` w katalogu raportu.
+
+- Jeśli `git-cliff` jest dostępny, Weekly spróbuje go użyć do wygenerowania `changelog.md`.
+- Jeśli `git-cliff` nie jest dostępny, Weekly użyje fallback (wewnętrzne statystyki commitów/diffów).
+
 ## Prompt dla LLM:
 
 ```

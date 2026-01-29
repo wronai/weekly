@@ -1,3 +1,18 @@
+## [0.1.35] - 2026-01-29
+
+### Summary
+
+docs(docs): better documentation
+
+### Docs
+
+- docs: update llm_usage_guide.md
+
+### Config
+
+- config: update goal.yaml
+
+
 ## [0.1.34] - 2026-01-29
 
 ### Summary
