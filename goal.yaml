@@ -148,9 +148,9 @@ git:
     format: '{prefix}{version}'
 strategies:
   python:
-    test: pytest tests/ -v
-    build: python -m build
-    publish: twine upload dist/*
+    test: poetry run pytest -q
+    build: poetry build
+    publish: poetry publish --build
     dependencies:
       file: requirements.txt
       lock: pip freeze > requirements.txt

@@ -2,12 +2,17 @@
 Report generation module for weekly.
 """
 
+from __future__ import annotations
+
 import json
 import markdown
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import TYPE_CHECKING, Any, Dict
 from dataclasses import asdict
+
+if TYPE_CHECKING:
+    from .core.repo_status import RepoStatus
 
 class ReportGenerator:
     """Class for generating reports from repository status."""

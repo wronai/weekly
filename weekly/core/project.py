@@ -1,11 +1,17 @@
 """
 Project class for Weekly - represents a project to be analyzed.
 """
+
+from __future__ import annotations
+
+import configparser
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
+
 import toml
 import yaml
 import json
+
 
 class Project:
     """Represents a project to be analyzed."""
@@ -18,14 +24,14 @@ class Project:
             path: Path to the project directory
         """
         self.path = Path(path).resolve()
-        self._pyproject = None
-        self._setup_py = None
-        self._setup_cfg = None
-        self._requirements_txt = None
-        self._git_info = None
+        self._pyproject: Optional[Dict[str, Any]] = None
+        self._setup_py: Optional[str] = None
+        self._setup_cfg: Optional[Dict[str, Dict[str, str]]] = None
+        self._requirements_txt: Optional[List[str]] = None
+        self._git_info: Optional[Dict[str, Any]] = None
         
     @property
-    def pyproject(self) -> Optional[Dict[str, Any]]:
+    def pyproject(self) -> Dict[str, Any]:
         """Get the parsed pyproject.toml content if it exists."""
         if self._pyproject is None:
             pyproject_path = self.path / 'pyproject.toml'
@@ -47,13 +53,18 @@ class Project:
         return self._setup_py
     
     @property
-    def setup_cfg(self) -> Optional[Dict[str, Any]]:
+    def setup_cfg(self) -> Dict[str, Dict[str, str]]:
         """Get the parsed setup.cfg content if it exists."""
         if self._setup_cfg is None:
             setup_cfg_path = self.path / 'setup.cfg'
             try:
                 if setup_cfg_path.exists():
-                    self._setup_cfg = dict(toml.load(setup_cfg_path))
+                    parser = configparser.ConfigParser()
+                    parser.read(setup_cfg_path)
+                    self._setup_cfg = {
+                        section: dict(parser.items(section))
+                        for section in parser.sections()
+                    }
                 else:
                     self._setup_cfg = {}
             except Exception:
@@ -120,7 +131,7 @@ class Project:
     @property
     def uses_poetry(self) -> bool:
         """Check if the project uses Poetry for dependency management."""
-        return 'tool' in (self.pyproject or {}) and 'poetry' in self.pyproject['tool']
+        return 'tool' in self.pyproject and 'poetry' in self.pyproject['tool']
     
     def get_file_content(self, file_path: str) -> Optional[str]:
         """
