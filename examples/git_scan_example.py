@@ -35,13 +35,18 @@ def main():
     print(f"📊 Summary report: {output_dir / 'summary.html'}")
     
     for result in results:
-        status = "✅" if not result.error and all(r.is_ok for r in result.results.values()) else "❌"
+        ok_results = [r for r in result.results.values() if r is not None]
+        status = "✅" if not result.error and all(getattr(r, "is_ok", True) for r in ok_results) else "❌"
         print(f"{status} {result.repo.org}/{result.repo.name}: {len(result.results)} checks")
         if result.error:
             print(f"   Error: {result.error}")
         for name, check in result.results.items():
-            status = "✓" if check.is_ok else "✗"
-            print(f"   {status} {name}: {check.message}")
+            if check is None:
+                print(f"   - {name}: (skipped)")
+                continue
+
+            status = "✓" if getattr(check, "is_ok", False) else "✗"
+            print(f"   {status} {name}: {getattr(check, 'message', str(check))}")
 
 if __name__ == "__main__":
     main()

@@ -102,8 +102,13 @@ class GitReportGenerator:
         # Collect all issues by file
         issues_by_file = {}
         bulk_issues = {}
+        changelog_info = None
         
         for name, result in results.items():
+            if name == "changelog" and result.metadata:
+                changelog_info = result.metadata
+                continue
+                
             if result.metadata and 'issues_data' in result.metadata:
                 issues_data = result.metadata['issues_data']
                 
@@ -121,6 +126,41 @@ class GitReportGenerator:
                             'tool': tool
                         })
                         bulk_issues[tool].append(issue)
+        
+        # Add changelog section if available
+        if changelog_info:
+            markdown_lines.append("## 📈 Recent Changes")
+            markdown_lines.append("")
+            markdown_lines.append(f"**Commits in the last period:** {changelog_info.get('total_commits', 0)}")
+            markdown_lines.append(f"**Files modified:** {changelog_info.get('files_changed', 0)}")
+            markdown_lines.append(f"**Lines added:** {changelog_info.get('additions', 0)}")
+            markdown_lines.append(f"**Lines removed:** {changelog_info.get('deletions', 0)}")
+            markdown_lines.append("")
+            
+            commit_types = changelog_info.get('commit_types', {})
+            if commit_types:
+                markdown_lines.append("**Commit types:**")
+                for c_type, count in sorted(commit_types.items(), key=lambda x: x[1], reverse=True):
+                    emoji = {
+                        'feat': '✨',
+                        'fix': '🐛',
+                        'refactor': '♻️',
+                        'docs': '📚',
+                        'style': '💄',
+                        'test': '✅',
+                        'chore': '🔧',
+                        'perf': '⚡',
+                        'ci': '👷',
+                        'build': '📦',
+                        'other': '📝'
+                    }.get(c_type, '📝')
+                    markdown_lines.append(f"- {emoji} {c_type.title()}: {count}")
+                markdown_lines.append("")
+            
+            markdown_lines.append("**📝 View full changelog:** `changelog.md` in the report directory")
+            markdown_lines.append("")
+            markdown_lines.append("---")
+            markdown_lines.append("")
         
         # Priority 1: Critical errors (non-formatting)
         markdown_lines.append("## 🚨 Priority 1: Critical Errors")

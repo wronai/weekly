@@ -87,6 +87,7 @@ class StyleChecker(BaseChecker):
                 ["black", "--check", "--diff", str(path)],
                 capture_output=True,
                 text=True,
+                errors="replace",
                 cwd=path.parent,
             )
             
@@ -122,6 +123,7 @@ class StyleChecker(BaseChecker):
                 ["isort", "--check-only", "--diff", str(path)],
                 capture_output=True,
                 text=True,
+                errors="replace",
                 cwd=path.parent,
             )
             
@@ -155,6 +157,7 @@ class StyleChecker(BaseChecker):
                 ["flake8", str(path)],
                 capture_output=True,
                 text=True,
+                errors="replace",
                 cwd=path.parent,
             )
             
@@ -206,6 +209,7 @@ class StyleChecker(BaseChecker):
                 ["mypy", str(path)],
                 capture_output=True,
                 text=True,
+                errors="replace",
                 cwd=path.parent,
             )
             

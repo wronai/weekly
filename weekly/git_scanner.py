@@ -19,8 +19,8 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.tree import Tree
 
-# Import only the specific CheckResult we need for reports
 from weekly.git_report import GitReportGenerator, RepoInfo, CheckResult as ReportCheckResult
+from weekly.git_change_analyzer import GitChangeAnalyzer, ChangeSummary
 
 from weekly.core.project import Project
 from weekly.core.report import CheckResult as CoreCheckResult
@@ -116,6 +116,7 @@ class ScanResult:
     repo: 'GitRepo'
     results: Dict[str, Any] = field(default_factory=dict)
     error: Optional[str] = None
+    change_summary: Optional[ChangeSummary] = None
     
     def __post_init__(self):
         """Initialize the scan result with default values."""
@@ -125,6 +126,19 @@ class ScanResult:
     
     def to_dict(self) -> Dict:
         """Convert the result to a dictionary."""
+        serialized_results: Dict[str, Any] = {}
+        for name, value in self.results.items():
+            if value is None:
+                serialized_results[name] = None
+                continue
+            if hasattr(value, "to_dict"):
+                serialized_results[name] = value.to_dict()
+                continue
+            if isinstance(value, dict):
+                serialized_results[name] = value
+                continue
+            serialized_results[name] = str(value)
+
         return {
             "repo": {
                 "path": str(self.repo.path),
@@ -134,7 +148,7 @@ class ScanResult:
                 "remote_url": self.repo.remote_url,
                 "last_commit_date": self.repo.last_commit_date.isoformat() if self.repo.last_commit_date else None,
             },
-            "results": {name: result.to_dict() for name, result in self.results.items()},
+            "results": serialized_results,
             "error": self.error,
         }
 
@@ -182,8 +196,11 @@ class GitScanner:
         for root, dirs, _ in os.walk(self.root_dir):
             if ".git" in dirs:
                 git_dirs.append(Path(root))
+                self.console.print(f"[dim]Found git repo: {Path(root)}[/]")
                 if not self.recursive:
                     dirs[:] = []  # Don't recurse further
+        
+        self.console.print(f"[dim]Found {len(git_dirs)} git directories[/]")
         
         # Create GitRepo objects
         for git_dir in git_dirs:
@@ -191,9 +208,17 @@ class GitScanner:
                 # Determine organization and repo name from path
                 rel_path = git_dir.relative_to(self.root_dir)
                 parts = list(rel_path.parts)
-                
-                org = parts[0] if len(parts) > 1 else ""
-                repo_name = parts[-1]
+
+                if not parts or parts == ["."]:
+                    # Root directory itself is a git repo
+                    org = ""
+                    repo_name = git_dir.name
+                elif len(parts) == 1:
+                    org = ""
+                    repo_name = parts[0]
+                else:
+                    org = parts[0]
+                    repo_name = parts[-1]
                 
                 repo = GitRepo(path=git_dir, name=repo_name, org=org)
                 
@@ -202,9 +227,13 @@ class GitScanner:
                     continue
                     
                 repos.append(repo)
+                self.console.print(f"[dim]Added repo: {repo.org}/{repo.name}[/]")
             except Exception as e:
+                import traceback
                 self.console.print(f"[yellow]Warning: Failed to process {git_dir}: {e}")
+                self.console.print(f"[dim]Traceback: {traceback.format_exc()}[/]")
         
+        self.console.print(f"[dim]Total repos: {len(repos)}[/]")
         return repos
     
     def scan_repo(self, repo: GitRepo) -> ScanResult:
@@ -212,14 +241,34 @@ class GitScanner:
         result = ScanResult(repo=repo)
         
         try:
+            # Analyze changes first if since date is specified
+            if self.since:
+                self.console.print(f"  📈 Analyzing changes since {self.since.strftime('%Y-%m-%d')}...")
+                analyzer = GitChangeAnalyzer(repo.path)
+                result.change_summary = analyzer.analyze_changes(self.since)
+                
+                # Generate changelog
+                changelog_path = self.output_dir / repo.org / repo.name / "changelog.md"
+                changelog_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # Try git-cliff first, fallback to summary
+                if not analyzer.generate_changelog_with_git_cliff(self.since, changelog_path):
+                    self.console.print("  [yellow]Using fallback changelog generation...[/]")
+                    summary_text = analyzer.generate_summary_report(result.change_summary)
+                    with open(changelog_path, 'w') as f:
+                        f.write(f"# Changelog\n\nGenerated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                        f.write(summary_text)
+                
+                self.console.print(f"  📝 Changelog saved to {changelog_path}")
+            
             # Import checkers dynamically to avoid circular imports
             from weekly.checkers import (
-                StyleChecker, 
-                CodeQualityChecker, 
+                StyleChecker,
+                CodeQualityChecker,
                 DependenciesChecker,
                 DocumentationChecker,
                 TestChecker,
-                CIChecker
+                CIChecker,
             )
 
             project = Project(repo.path)
@@ -236,7 +285,7 @@ class GitScanner:
             # Run all checkers
             for checker in checkers:
                 try:
-                    if getattr(checker, "name", None) == "style":
+                    if isinstance(checker, StyleChecker):
                         check_result = checker.check(repo.path)
                     else:
                         check_result = checker.check(project)
@@ -394,6 +443,34 @@ class GitScanner:
                 details=getattr(check_result, 'details', None),
                 next_steps=getattr(check_result, 'next_steps', []),
                 severity="high" if not getattr(check_result, 'is_ok', True) else "low"
+            )
+        
+        # Add changelog information if available
+        if result.change_summary:
+            analyzer = GitChangeAnalyzer(repo.path)
+            changelog_info = analyzer.generate_summary_report(result.change_summary)
+            
+            # Add as a special check result
+            check_results["changelog"] = ReportCheckResult(
+                name="changelog",
+                description="Recent changes and commits",
+                is_ok=True,
+                message=f"Found {len(result.change_summary.commits)} commits since {self.since.strftime('%Y-%m-%d')}",
+                details={
+                    "summary": changelog_info,
+                    "metadata": {
+                        "total_commits": len(result.change_summary.commits),
+                        "files_changed": result.change_summary.total_files,
+                        "additions": result.change_summary.total_additions,
+                        "deletions": result.change_summary.total_deletions,
+                        "commit_types": result.change_summary.commit_types
+                    }
+                },
+                next_steps=[
+                    f"View full changelog: {output_dir}/changelog.md",
+                    "Review recent commits for potential issues"
+                ],
+                severity="info"
             )
         
         # Generate the report
