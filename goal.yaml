@@ -181,7 +181,7 @@ hooks:
   pre_push: ''
   post_push: ''
 advanced:
-  auto_update_config: true
+  auto_update_config: false
   performance:
     max_files: 50
     timeout_test: 300
