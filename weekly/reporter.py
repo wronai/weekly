@@ -65,7 +65,7 @@ class ReportGenerator:
         # Save JSON report
         json_path = output_dir / "status.json"
         with open(json_path, 'w') as f:
-            json.dump(status.to_dict(), f, indent=2)
+            json.dump(status.to_dict(), f, indent=2, default=str)
         
         # Save Markdown report
         md_path = output_dir / "status.md"
@@ -165,23 +165,3 @@ class ReportGenerator:
     </div>
 </body>
 </html>"""
-
-    @classmethod
-    def save_reports(cls, status: 'RepoStatus', output_dir: Path):
-        """Save all report files for a repository."""
-        # Create output directory if it doesn't exist
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Save status.json
-        with open(output_dir / 'status.json', 'w') as f:
-            json.dump(status.to_dict(), f, indent=2, default=str)
-        
-        # Generate and save markdown
-        md_content = cls.generate_markdown(status)
-        with open(output_dir / 'status.md', 'w') as f:
-            f.write(md_content)
-        
-        # Generate and save HTML
-        html_content = cls.generate_html(status, md_content)
-        with open(output_dir / 'index.html', 'w') as f:
-            f.write(html_content)

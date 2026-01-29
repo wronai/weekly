@@ -30,6 +30,9 @@ class DependenciesChecker(BaseChecker):
         Returns:
             CheckResult with dependencies-related findings
         """
+        if isinstance(project, Path):
+            project = Project(project)
+
         if not project.is_python_project:
             return None
             

@@ -7,7 +7,7 @@ import json
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Any, Dict, List, Optional, Tuple, Set
 from dataclasses import dataclass, asdict, field
 import subprocess
 import shlex
@@ -21,6 +21,9 @@ from rich.tree import Tree
 
 # Import only the specific CheckResult we need for reports
 from weekly.git_report import GitReportGenerator, RepoInfo, CheckResult as ReportCheckResult
+
+from weekly.core.project import Project
+from weekly.core.report import CheckResult as CoreCheckResult
 
 
 @dataclass
@@ -37,10 +40,6 @@ class GitRepo:
     
     def __post_init__(self):
         """Initialize repository metadata."""
-        print(f"[DEBUG] GitRepo.__post_init__ called with: {self}")
-        print(f"[DEBUG] self.path: {getattr(self, 'path', 'NOT SET')}")
-        print(f"[DEBUG] self.name: {getattr(self, 'name', 'NOT SET')}")
-        
         if not hasattr(self, 'path') or not self.path:
             raise ValueError("path is required")
             
@@ -64,10 +63,8 @@ class GitRepo:
             
         if not hasattr(self, 'remote_url') or self.remote_url is None:
             self.remote_url = ""
-            
-        print(f"[DEBUG] Before _extract_metadata: {self.__dict__}")
+
         self._extract_metadata()
-        print(f"[DEBUG] After _extract_metadata: {self.__dict__}")
     
     def _extract_metadata(self) -> None:
         """Extract metadata from the Git repository."""
@@ -122,11 +119,6 @@ class ScanResult:
     
     def __post_init__(self):
         """Initialize the scan result with default values."""
-        print(f"[DEBUG] Initializing ScanResult with repo={self.repo}, results={self.results}, error={self.error}")
-        print(f"[DEBUG] Type of repo: {type(self.repo).__name__}")
-        print(f"[DEBUG] Type of results: {type(self.results).__name__ if self.results is not None else 'None'}")
-        print(f"[DEBUG] Type of error: {type(self.error).__name__ if self.error is not None else 'None'}")
-        
         # Ensure results is always a dictionary
         if self.results is None:
             self.results = {}
@@ -229,6 +221,8 @@ class GitScanner:
                 TestChecker,
                 CIChecker
             )
+
+            project = Project(repo.path)
             
             checkers = [
                 StyleChecker(),
@@ -242,7 +236,10 @@ class GitScanner:
             # Run all checkers
             for checker in checkers:
                 try:
-                    check_result = checker.check(repo.path)
+                    if getattr(checker, "name", None) == "style":
+                        check_result = checker.check(repo.path)
+                    else:
+                        check_result = checker.check(project)
                     result.results[checker.name] = check_result
                 except Exception as e:
                     self.console.print(f"[yellow]Warning: Checker {checker.name} failed for {repo.path}: {e}")
@@ -322,7 +319,6 @@ class GitScanner:
         """
         # Create output directory
         output_dir = self.output_dir / (repo.org or '') / repo.name
-        self.console.print(f"[debug] Creating output directory: {output_dir}")
         output_dir.mkdir(parents=True, exist_ok=True)
         
         # Verify directory was created and is writable
@@ -334,15 +330,20 @@ class GitScanner:
         report_filename = f"{timestamp}.html"
         report_path = output_dir / report_filename
         
-        self.console.print(f"[debug] Report will be saved to: {report_path}")
-        
         # Prepare repository info
         has_errors = result.error is not None
-        if not has_errors:
-            for check_result in result.results.values():
-                if hasattr(check_result, 'is_ok') and not check_result.is_ok:
+        for check_result in result.results.values():
+            if check_result is None:
+                continue
+            if has_errors:
+                break
+            if isinstance(check_result, CoreCheckResult):
+                if (check_result.status or "").lower() != "success":
                     has_errors = True
                     break
+            elif hasattr(check_result, "is_ok") and not check_result.is_ok:
+                has_errors = True
+                break
         
         repo_info = RepoInfo(
             name=repo.name,
@@ -355,9 +356,36 @@ class GitScanner:
         )
         
         # Convert check results to the format expected by GitReportGenerator
-        check_results = {}
+        check_results: Dict[str, ReportCheckResult] = {}
         for name, check_result in result.results.items():
-            # Create a CheckResult with the correct interface for the report generator
+            if check_result is None:
+                continue
+
+            if isinstance(check_result, CoreCheckResult):
+                status = (check_result.status or "").lower()
+                is_ok = status == "success"
+                if status == "error":
+                    severity = "high"
+                elif status == "warning":
+                    severity = "medium"
+                else:
+                    severity = "low"
+
+                check_results[name] = ReportCheckResult(
+                    name=name,
+                    description="",
+                    is_ok=is_ok,
+                    message=check_result.title,
+                    details={
+                        "details": check_result.details,
+                        "metadata": check_result.metadata,
+                    },
+                    next_steps=list(check_result.suggestions or []),
+                    severity=severity,
+                )
+                continue
+
+            # Fallback for any other checker result interface
             check_results[name] = ReportCheckResult(
                 name=name,
                 description=getattr(check_result, 'description', ''),
@@ -415,13 +443,24 @@ class GitScanner:
         summary_path = self.output_dir / "summary.html"
         
         # Prepare repository data for the summary
-        repos_data = []
+        repos_data: List[Dict[str, Any]] = []
         for result in results:
-            has_errors = result.error is not None or any(not check.is_ok for check in result.results.values())
-            
+            has_errors = result.error is not None
+            if not has_errors:
+                for check in result.results.values():
+                    if check is None:
+                        continue
+                    if isinstance(check, CoreCheckResult):
+                        if (check.status or "").lower() != "success":
+                            has_errors = True
+                            break
+                    elif hasattr(check, "is_ok") and not check.is_ok:
+                        has_errors = True
+                        break
+
             # Generate the relative path to the repository's latest report
             rel_report_path = Path(result.repo.org) / result.repo.name / "latest.html"
-            
+
             repos_data.append({
                 "name": result.repo.name,
                 "org": result.repo.org,
@@ -430,42 +469,18 @@ class GitScanner:
                 "has_errors": has_errors,
                 "last_commit": result.repo.last_commit_date.strftime("%Y-%m-%d %H:%M") if result.repo.last_commit_date else "Unknown",
                 "report_path": str(rel_report_path),
-                "remote_url": result.repo.remote_url
+                "remote_url": result.repo.remote_url,
             })
-        
+
         # Sort repos by organization and name
-        repos_data.sort(key=lambda x: (x["org"].lower(), x["name"].lower()))
-        
-        # Generate the summary report
+        repos_data.sort(key=lambda x: (x.get("org", "").lower(), x.get("name", "").lower()))
+
         GitReportGenerator.generate_summary_report(
             repos=repos_data,
             output_path=summary_path,
             title="Weekly Scan Summary",
             scan_date=datetime.now().strftime("%Y-%m-%d"),
-            since_date=self.since.strftime("%Y-%m-%d") if self.since else None
-        )
-        
-        summary_data = []
-        for result in results:
-            repo = result.repo
-            summary_data.append({
-                "name": f"{repo.org}/{repo.name}" if repo.org else repo.name,
-                "path": str(repo.path),
-                "branch": repo.branch,
-                "last_commit": repo.last_commit_date.strftime("%Y-%m-%d") if repo.last_commit_date else "Unknown",
-                "has_errors": any(not r.is_ok for r in result.results.values()),
-                "report_path": f"{repo.org}/{repo.name}/latest.html" if repo.org else f"{repo.name}/latest.html"
-            })
-            
-        return summary_path
-        
-        # Generate the summary report
-        self.report_generator.generate_summary(
-            repos=summary_data,
-            output_path=summary_path,
-            title="Weekly Scan Summary",
-            scan_date=datetime.now().strftime("%Y-%m-%d"),
             since_date=self.since.strftime("%Y-%m-%d") if self.since else None,
         )
-        
-        self.console.print(f"\n[green]✓ Generated summary report: {summary_path}")
+
+        return summary_path

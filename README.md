@@ -316,21 +316,15 @@ for suggestion in report.get_suggestions():
    cd weekly
    ```
 
-2. Create and activate a virtual environment:
+2. Install dependencies (recommended):
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. Install development dependencies:
-   ```bash
-   pip install -e .[dev]
+   poetry install --with dev
    ```
 
 ### Running Tests
 
 ```bash
-pytest
+poetry run pytest
 ```
 
 ### Code Style
@@ -356,7 +350,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 

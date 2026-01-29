@@ -31,6 +31,9 @@ class CodeQualityChecker(BaseChecker):
         Returns:
             CheckResult with code quality findings
         """
+        if isinstance(project, Path):
+            project = Project(project)
+
         if not project.is_python_project:
             return None
             

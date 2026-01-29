@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Added `TODO.md`
+- Added basic documentation pages in `docs/` (`index.md`, `development.md`, `architecture.md`, `checkers.md`)
+
+### Changed
+- `weekly.__version__` is now derived from package metadata at runtime (with a safe fallback)
+
+### Fixed
+- Added missing `markdown` runtime dependency to Poetry configuration
+- Removed duplicated `ReportGenerator.save_reports` implementation
+- Replaced deprecated `datetime.utcnow()` usage with timezone-aware UTC timestamps
+- Cleaned up `GitScanner` summary report generation (removed dead code, fixed logic) and adapted checker execution to use `Project` where applicable
+
 ## [0.1.3] - 2025-06-07
 
 ### Added

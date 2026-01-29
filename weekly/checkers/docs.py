@@ -29,6 +29,9 @@ class DocumentationChecker:
         Returns:
             CheckResult with documentation-related findings
         """
+        if isinstance(project, Path):
+            project = Project(project)
+
         if not project.is_python_project:
             return None
             

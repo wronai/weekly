@@ -282,12 +282,25 @@ class StyleChecker(BaseChecker):
             f"Found {len(self.issues)} total style issues across {len(issues_by_tool)} tools:"
         ]
         
+        # Store full issue data in metadata
+        issues_data = {}
+        
         for tool, issues in sorted(issues_by_tool.items()):
             details.append(f"\n{tool.upper()}: {len(issues)} issues")
-            for issue in issues[:5]:  # Show first 5 issues per tool
-                details.append(f"  - {issue.file_path}:{issue.line}: {issue.message} ({issue.code})")
-            if len(issues) > 5:
-                details.append(f"  ... and {len(issues) - 5} more issues")
+            issues_data[tool] = []
+            
+            # Show all issues, not just first 5
+            for issue in issues:
+                issue_str = f"  - {issue.file_path}:{issue.line}: {issue.message} ({issue.code})"
+                details.append(issue_str)
+                issues_data[tool].append({
+                    'file': issue.file_path,
+                    'line': issue.line,
+                    'column': issue.column,
+                    'code': issue.code,
+                    'message': issue.message,
+                    'tool': issue.tool
+                })
         
         # Generate next steps
         suggestions = [
@@ -322,7 +335,8 @@ class StyleChecker(BaseChecker):
             suggestions=suggestions,
             metadata={
                 "total_issues": len(self.issues),
-                "issues_by_tool": {tool: len(issues) for tool, issues in issues_by_tool.items()}
+                "issues_by_tool": {tool: len(issues) for tool, issues in issues_by_tool.items()},
+                "issues_data": issues_data  # Store full issue data
             }
         )
     

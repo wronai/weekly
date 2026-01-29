@@ -2,7 +2,12 @@
 Weekly - A tool for analyzing project quality and suggesting next steps.
 """
 
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import version
+
+    __version__ = version("weekly")
+except Exception:
+    __version__ = "0.0.0"
 
 from pathlib import Path
 from typing import List, Dict, Any, Optional

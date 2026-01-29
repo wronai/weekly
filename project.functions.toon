@@ -1,0 +1,210 @@
+project: weekly
+generated: "2026-01-28T22:10:22.959670"
+modules[26]{path,lang,items}:
+  setup.py,python,0
+  examples/git_scan_example.py,python,1
+  weekly/git_scanner.py,python,12
+  weekly/cli.py,python,4
+  weekly/reporter.py,python,4
+  weekly/__init__.py,python,0
+  weekly/git_analyzer.py,python,4
+  weekly/git_report.py,python,6
+  tests/test_style_checker.py,python,13
+  tests/__init__.py,python,0
+  tests/debug_parse_mypy.py,python,1
+  tests/test_reporter.py,python,4
+  tests/test_cli.py,python,6
+  tests/test_analyzer.py,python,4
+  weekly/checkers/base.py,python,4
+  weekly/checkers/ci_cd.py,python,6
+  weekly/checkers/__init__.py,python,0
+  weekly/checkers/dependencies.py,python,8
+  weekly/checkers/testing.py,python,5
+  weekly/checkers/code_quality.py,python,8
+  weekly/checkers/style.py,python,13
+  weekly/checkers/docs.py,python,10
+  weekly/core/analyzer.py,python,1
+  weekly/core/project.py,python,12
+  weekly/core/repo_status.py,python,1
+  weekly/core/report.py,python,8
+
+function_details:
+  examples/git_scan_example.py:
+    functions[1]{name,kind,sig,loc,async,lines,cc,does}:
+      main,function,(),14-44,false,31,8,main
+  weekly/git_scanner.py:
+    functions[12]{name,kind,sig,loc,async,lines,cc,does}:
+      GitRepo.__post_init__,method,(),38-70,false,33,15,Initialize repository metadata.
+      GitRepo._extract_metadata,method,() -> None,72-93,false,22,8,Extract metadata from the Git repository.
+      GitRepo.has_recent_changes,method,"(since:datetime) -> bool",95-99,false,5,2,Check if the repository has changes since a specific date.
+      GitRepo._run_git,method,"(command:str) -> subprocess.CompletedProcess",101-112,false,12,2,Run a git command in the repository.
+      ScanResult.__post_init__,method,(),123-132,false,10,4,Initialize the scan result with default values.
+      ScanResult.to_dict,method,() -> Dict,134-147,false,14,3,Convert the result to a dictionary.
+      GitScanner.__init__,method,"(root_dir:Path, output_dir:Path, since:Optional[datetime]=None, recursive:bool=True, jobs:int=4)",153-176,false,24,2,Initialize the scanner.
+      GitScanner.find_git_repos,method,"() -> List[GitRepo]",178-216,false,39,10,Find all Git repositories in the root directory.
+      GitScanner.scan_repo,method,"(repo:GitRepo) -> ScanResult",218-257,false,40,4,Scan a single repository and return the results.
+      GitScanner.scan_all,method,"() -> List[ScanResult]",259-311,false,53,6,Scan all repositories and generate reports.
+      GitScanner._generate_repo_report,method,"(repo:GitRepo, result:ScanResult) -> Path",313-401,false,89,15,Generate a report for a single repository.
+      GitScanner._generate_summary_report,method,"(results:List[ScanResult]) -> Path",403-471,false,69,13,Generate a summary report for all repositories.
+  weekly/cli.py:
+    functions[4]{name,kind,sig,loc,async,lines,cc,does}:
+      main,function,(),24-26,false,3,1,Weekly - Analyze your Python project's quality and get suggestions for improveme...
+      analyze,function,"(project_path:Path, output_format:str, output:str, show_suggestions:bool, verbose:bool)",38-84,false,47,9,Analyze a Python project and provide quality insights.
+      _format_text_output,function,"(report:Report, show_suggestions:bool=True) -> str",86-141,false,56,9,Format the report as human-readable text.
+      scan,function,"(root_dir:Path, output_dir:Path, since_str:Optional[str], recursive:bool, jobs:int, output_format:str, summary_only:bool, verbose:bool)",160-226,false,67,10,Scan multiple Git repositories and generate quality reports.
+  weekly/reporter.py:
+    functions[4]{name,kind,sig,loc,async,lines,cc,does}:
+      ReportGenerator.generate_markdown,method,"(status:RepoStatus) -> str",16-46,false,31,7,Generate markdown report from status data.
+      ReportGenerator.save_reports,method,"(status:RepoStatus, output_dir:Path) -> None",49-78,false,30,1,Save all report files to the specified directory.
+      ReportGenerator.generate_html,method,"(status:RepoStatus, markdown_content:str) -> str",81-167,false,87,1,Generate HTML report with download option.
+      ReportGenerator.save_reports,method,"(status:RepoStatus, output_dir:Path)",170-187,false,18,1,Save all report files for a repository.
+  weekly/git_analyzer.py:
+    functions[4]{name,kind,sig,loc,async,lines,cc,does}:
+      CommitStats.to_dict,method,"() -> Dict[str, Any]",26-36,false,11,1,Convert to dictionary for JSON serialization.
+      GitAnalyzer.__init__,method,"(repo_path:Path)",42-44,false,3,1,Initialize with the path to the Git repository.
+      GitAnalyzer.get_commit_history,method,"(since:Optional[datetime]=None) -> List[CommitStats]",46-106,false,61,11,Get the commit history of the repository.
+      GitAnalyzer.analyze,method,"(since_days:int=30) -> RepoStatus",108-165,false,58,12,Analyze the repository and return a RepoStatus object.
+  weekly/git_report.py:
+    functions[6]{name,kind,sig,loc,async,lines,cc,does}:
+      CheckResult.__init__,method,"(name:str, description:str, is_ok:bool, message:str, details:Optional[Dict]=None, next_steps:Optional[List[str]]=None, severity:str='medium')",14-41,false,28,2,Initialize a check result.
+      GitReportGenerator.generate_html_report,method,"(results:Dict[str,CheckResult], repo_info:RepoInfo, output_path:Union[str,Path], title:str='Weekly Git Report') -> None",58-97,false,40,4,Generate an HTML report for a repository scan.
+      GitReportGenerator.generate_summary_report,method,"(repos:List[Dict[str,Any]], output_path:Union[str,Path], title:str='Weekly Scan Summary', scan_date:Optional[str]=None, since_date:Optional[str]=None) -> None",100-133,false,34,2,Generate a summary HTML report for multiple repositories.
+      GitReportGenerator._render_html_template,method,"(template_name:str, context:Dict[str,Any]) -> str",136-154,false,19,3,Render an HTML template with the given context.
+      GitReportGenerator._render_repo_report,method,"(context:Dict[str,Any]) -> str",157-278,false,122,9,Render the repository report template.
+      GitReportGenerator._render_summary_report,method,"(context:Dict[str,Any]) -> str",281-373,false,93,5,Render the summary report template.
+  tests/test_style_checker.py:
+    functions[13]{name,kind,sig,loc,async,lines,cc,does}:
+      style_checker,function,(),18-20,false,3,1,Create a StyleChecker instance for testing.
+      test_style_checker_initialization,function,(style_checker),23-27,false,5,1,Test that the style checker initializes correctly.
+      test_style_checker_with_valid_code,function,"(tmp_path, style_checker)",30-49,false,20,1,Test style checker with valid Python code.
+      test_black_check_with_invalid_formatting,function,"(tmp_path, style_checker)",52-73,false,22,2,Test Black formatter check with poorly formatted code.
+      test_isort_check_with_misordered_imports,function,"(tmp_path, style_checker)",76-104,false,29,2,Test isort check with misordered imports.
+      test_flake8_check_with_style_issues,function,"(tmp_path, style_checker)",107-128,false,22,2,Test flake8 check with style issues.
+      test_mypy_check_with_type_issues,function,"(tmp_path, style_checker)",131-161,false,31,2,Test mypy check with type issues.
+      test_parse_black_output,function,(style_checker),164-178,false,15,1,Test parsing Black formatter output.
+      test_parse_isort_output,function,(style_checker),181-193,false,13,1,Test parsing isort output.
+      test_parse_flake8_output,function,(style_checker),196-207,false,12,1,Test parsing flake8 output.
+      test_parse_mypy_output,function,(style_checker),210-231,false,22,1,Test parsing mypy output.
+      test_generate_report_with_issues,function,(style_checker),234-268,false,35,3,Test generating a report with style issues.
+      test_get_fix_commands,function,(style_checker),271-279,false,9,5,Test getting fix commands for style issues.
+  tests/debug_parse_mypy.py:
+    functions[1]{name,kind,sig,loc,async,lines,cc,does}:
+      test_parse_mypy_output,function,(),10-32,false,23,2,Test parsing mypy output.
+  tests/test_reporter.py:
+    functions[4]{name,kind,sig,loc,async,lines,cc,does}:
+      sample_status,function,(),12-47,false,36,1,Create a sample RepoStatus instance for testing.
+      test_generate_markdown,function,(sample_status),49-64,false,16,1,Test markdown report generation.
+      test_generate_html,function,(sample_status),66-82,false,17,1,Test HTML report generation.
+      test_save_reports,function,"(mock_json_dump, mock_open, sample_status, tmp_path)",86-111,false,26,1,Test saving all report files.
+  tests/test_cli.py:
+    functions[6]{name,kind,sig,loc,async,lines,cc,does}:
+      runner,function,(),15-17,false,3,1,Fixture for invoking command-line interfaces.
+      test_analyze_command,function,"(runner, tmp_path)",19-51,false,33,1,Test the analyze command with a simple project.
+      test_analyze_org_command,function,"(mock_find, mock_init, mock_scan_all, runner, tmp_path)",56-89,false,34,1,Test the scan command for multiple repositories.
+      test_cli_help,function,(runner),91-99,false,9,1,Test the CLI help output.
+      test_analyze_command_no_repo,function,"(mock_analyzer, runner, tmp_path)",102-113,false,12,1,Test the analyze command with a non-existent repository.
+      test_analyze_org_command_no_repos,function,"(mock_find, runner, tmp_path)",116-130,false,15,1,Test the scan command with a directory containing no Git repos.
+  tests/test_analyzer.py:
+    functions[4]{name,kind,sig,loc,async,lines,cc,does}:
+      test_commit_stats_initialization,function,(),13-26,false,14,1,Test CommitStats initialization and to_dict method.
+      test_repo_status_initialization,function,(),28-45,false,18,1,Test RepoStatus initialization and to_dict method.
+      test_git_analyzer_get_commit_history,function,(mock_run),48-71,false,24,1,Test GitAnalyzer commit history parsing.
+      test_git_analyzer_analyze,function,(mock_run),74-113,false,40,1,Test GitAnalyzer analyze method.
+  weekly/checkers/base.py:
+    functions[4]{name,kind,sig,loc,async,lines,cc,does}:
+      BaseChecker.name,method,() -> str,27-29,false,3,1,Return the name of the checker.
+      BaseChecker.description,method,() -> str,33-35,false,3,1,Return a short description of what this checker does.
+      BaseChecker.check,method,"(project:Project) -> Optional[CheckResult]",38-48,false,11,1,Run the checker on the given project.
+      BaseChecker._get_file_content,method,"(file_path:Path) -> Optional[str]",50-57,false,8,4,Helper method to safely read file content.
+  weekly/checkers/ci_cd.py:
+    functions[6]{name,kind,sig,loc,async,lines,cc,does}:
+      CIChecker.name,method,() -> str,16-17,false,2,1,name
+      CIChecker.description,method,() -> str,20-21,false,2,1,description
+      CIChecker.check,method,"(project:Project) -> Optional[CheckResult]",23-90,false,68,8,Check the project's CI/CD setup.
+      CIChecker._detect_ci_config,method,"(project:Project) -> Dict[str, Any]",92-146,false,55,8,Detect CI configuration files.
+      CIChecker._detect_cd_config,method,"(project:Project) -> Dict[str, Any]",148-192,false,45,15,Detect CD configuration files.
+      CIChecker._has_testing_in_ci,method,"(project:Project, ci_config:Dict[str,Any]) -> bool",194-212,false,19,11,Check if testing is part of the CI configuration.
+  weekly/checkers/dependencies.py:
+    functions[8]{name,kind,sig,loc,async,lines,cc,does}:
+      DependenciesChecker.name,method,() -> str,16-17,false,2,1,name
+      DependenciesChecker.description,method,() -> str,20-21,false,2,1,description
+      DependenciesChecker.check,method,"(project:Project) -> Optional[CheckResult]",23-101,false,79,8,Check the project's dependencies.
+      DependenciesChecker._get_dependencies,method,"(project:Project) -> Dict[str, List[Tuple[str, str]]]",103-175,false,73,30,Extract dependencies from various project files.
+      DependenciesChecker._parse_dep_spec,method,"(spec:str) -> Tuple[str, str, str]",177-199,false,23,6,"Parse a dependency specification into (name, version_spec, extras)."
+      DependenciesChecker._normalize_constraint,method,"(constraint:str) -> str",201-215,false,15,5,Normalize version constraints for comparison.
+      DependenciesChecker._find_unpinned_dependencies,method,"(deps:Dict[str,List[Tuple[str,str]]]) -> List[str]",217-227,false,11,7,Find dependencies that don't have version constraints.
+      DependenciesChecker._find_outdated_dependencies,method,"(deps:Dict[str,List[Tuple[str,str]]]) -> List[str]",229-233,false,5,1,Find potentially outdated dependencies.
+  weekly/checkers/testing.py:
+    functions[5]{name,kind,sig,loc,async,lines,cc,does}:
+      TestChecker.name,method,() -> str,16-17,false,2,1,name
+      TestChecker.description,method,() -> str,20-21,false,2,1,description
+      TestChecker.check,method,"(project:Project) -> Optional[CheckResult]",23-103,false,81,15,Check the project's testing setup.
+      TestChecker._has_test_config,method,"(project:Project) -> bool",105-128,false,24,8,Check if the project has test configuration.
+      TestChecker._check_test_coverage,method,"(project:Project) -> Optional[float]",130-153,false,24,6,Check test coverage if coverage files are present.
+  weekly/checkers/code_quality.py:
+    functions[8]{name,kind,sig,loc,async,lines,cc,does}:
+      CodeQualityChecker.name,method,() -> str,17-18,false,2,1,name
+      CodeQualityChecker.description,method,() -> str,21-22,false,2,1,description
+      CodeQualityChecker.check,method,"(project:Project) -> Optional[CheckResult]",24-107,false,84,17,Check the project's code quality.
+      CodeQualityChecker._detect_formatters,method,"(project:Project) -> List[str]",109-138,false,30,14,Detect code formatters in the project.
+      CodeQualityChecker._detect_linters,method,"(project:Project) -> List[str]",140-169,false,30,14,Detect linters in the project.
+      CodeQualityChecker._detect_type_checkers,method,"(project:Project) -> List[str]",171-193,false,23,9,Detect type checkers in the project.
+      CodeQualityChecker._find_common_issues,method,"(project:Project) -> Dict[str, Any]",195-290,false,96,39,Find common code quality issues.
+      CodeQualityChecker._get_dependencies,method,"(project:Project) -> Dict[str, List[tuple]]",292-296,false,5,1,Helper to get dependencies from the project.
+  weekly/checkers/style.py:
+    functions[13]{name,kind,sig,loc,async,lines,cc,does}:
+      StyleIssue.to_dict,method,"() -> Dict[str, str | int]",28-37,false,10,1,Convert the issue to a dictionary.
+      StyleChecker.__init__,method,"(config:Optional[Dict]=None)",55-64,false,10,2,Initialize the style checker.
+      StyleChecker.check,method,"(path:Path) -> CheckResult",66-80,false,15,1,Run style checks on the given path.
+      StyleChecker._run_black_check,method,"(path:Path) -> None",82-97,false,16,3,Run Black formatter check.
+      StyleChecker._parse_black_output,method,"(output:str) -> None",99-115,false,17,6,Parse Black output and extract issues.
+      StyleChecker._run_isort_check,method,"(path:Path) -> None",117-132,false,16,3,Run isort import sorter check.
+      StyleChecker._parse_isort_output,method,"(output:str) -> None",134-148,false,15,4,Parse isort output and extract issues.
+      StyleChecker._run_flake8_check,method,"(path:Path) -> None",150-165,false,16,3,Run flake8 linter check.
+      StyleChecker._parse_flake8_output,method,"(output:str) -> None",167-199,false,33,10,Parse flake8 output and extract issues.
+      StyleChecker._run_mypy_check,method,"(path:Path) -> None",201-216,false,16,3,Run mypy static type checker.
+      StyleChecker._parse_mypy_output,method,"(output:str) -> None",218-257,false,40,12,Parse mypy output and extract issues.
+      StyleChecker._generate_report,method,() -> 'CheckResult',259-327,false,69,11,Generate a report from the collected issues.
+      StyleChecker.get_fix_commands,method,"() -> List[Tuple[str, str]]",329-336,false,8,1,Get commands to fix the detected issues.
+  weekly/checkers/docs.py:
+    functions[10]{name,kind,sig,loc,async,lines,cc,does}:
+      DocumentationChecker.name,method,() -> str,15-16,false,2,1,name
+      DocumentationChecker.description,method,() -> str,19-20,false,2,1,description
+      DocumentationChecker.check,method,"(project:Project) -> Optional[CheckResult]",22-123,false,102,15,Check the project's documentation.
+      DocumentationChecker._check_readme,method,"(project:Project) -> Dict[str, Any]",125-138,false,14,3,Check for README file.
+      DocumentationChecker._check_license,method,"(project:Project) -> Dict[str, Any]",140-155,false,16,4,Check for LICENSE file.
+      DocumentationChecker._detect_license_type,method,"(content:str) -> Optional[str]",157-176,false,20,15,Detect the type of license from content.
+      DocumentationChecker._check_changelog,method,"(project:Project) -> Dict[str, bool]",178-186,false,9,3,Check for CHANGELOG file.
+      DocumentationChecker._check_contributing,method,"(project:Project) -> Dict[str, bool]",188-196,false,9,3,Check for CONTRIBUTING file.
+      DocumentationChecker._check_code_of_conduct,method,"(project:Project) -> Dict[str, bool]",198-206,false,9,3,Check for CODE_OF_CONDUCT file.
+      DocumentationChecker._check_api_docs,method,"(project:Project) -> Dict[str, bool]",208-224,false,17,7,Check for API documentation.
+  weekly/core/analyzer.py:
+    functions[1]{name,kind,sig,loc,async,lines,cc,does}:
+      analyze_project,function,"(project_path:Path) -> Report",17-49,false,33,4,Analyze a project and generate a report with suggested next steps.
+  weekly/core/project.py:
+    functions[12]{name,kind,sig,loc,async,lines,cc,does}:
+      Project.__init__,method,"(path:Path)",13-25,false,13,1,Initialize with the project path.
+      Project.pyproject,method,"() -> Optional[Dict[str, Any]]",28-39,false,12,4,Get the parsed pyproject.toml content if it exists.
+      Project.setup_py,method,"() -> Optional[str]",42-47,false,6,2,Get the content of setup.py if it exists.
+      Project.setup_cfg,method,"() -> Optional[Dict[str, Any]]",50-61,false,12,4,Get the parsed setup.cfg content if it exists.
+      Project.requirements_txt,method,"() -> List[str]",64-79,false,16,7,Get the list of requirements from requirements.txt if it exists.
+      Project.has_tests,method,() -> bool,82-87,false,6,2,Check if the project has a tests directory.
+      Project.has_ci_config,method,() -> bool,90-104,false,15,3,Check if the project has CI configuration files.
+      Project.has_docs,method,() -> bool,107-110,false,4,2,Check if the project has documentation.
+      Project.is_python_project,method,() -> bool,113-118,false,6,4,Check if this is a Python project.
+      Project.uses_poetry,method,() -> bool,121-123,false,3,3,Check if the project uses Poetry for dependency management.
+      Project.get_file_content,method,"(file_path:str) -> Optional[str]",125-136,false,12,1,Get the content of a file in the project.
+      Project._read_file,method,"(path:Path) -> Optional[str]",138-145,false,8,4,Helper method to safely read a file.
+  weekly/core/repo_status.py:
+    functions[1]{name,kind,sig,loc,async,lines,cc,does}:
+      RepoStatus.to_dict,method,"() -> Dict[str, Any]",23-37,false,15,1,Convert to dictionary for JSON serialization.
+  weekly/core/report.py:
+    functions[8]{name,kind,sig,loc,async,lines,cc,does}:
+      CheckResult.__init__,method,"(checker_name:str, title:str, status:str, details:str, suggestions:Optional[List[str]]=None, metadata:Optional[Dict[str,Any]]=None)",15-39,false,25,3,Initialize a check result.
+      CheckResult.to_dict,method,"() -> Dict[str, Any]",41-50,false,10,1,Convert the check result to a dictionary.
+      Report.__init__,method,"(project:Project)",56-71,false,16,1,Initialize with the project being analyzed.
+      Report.add_result,method,"(result:CheckResult) -> None",73-89,false,17,4,Add a check result to the report.
+      Report.get_suggestions,method,"() -> List[Dict[str, Any]]",91-107,false,17,3,Get all suggestions from the report.
+      Report.to_dict,method,"() -> Dict[str, Any]",109-122,false,14,2,Convert the report to a dictionary.
+      Report.to_json,method,"(indent:int=2) -> str",124-135,false,12,1,Convert the report to a JSON string.
+      Report.to_markdown,method,() -> str,137-179,false,43,4,Convert the report to a markdown string.

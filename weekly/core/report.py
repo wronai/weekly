@@ -2,7 +2,7 @@
 Report class for Weekly - represents the results of project analysis.
 """
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
@@ -49,6 +49,31 @@ class CheckResult:
             'metadata': self.metadata
         }
 
+    @property
+    def is_ok(self) -> bool:
+        return (self.status or "").lower() == "success"
+
+    @property
+    def message(self) -> str:
+        return self.title
+
+    @property
+    def next_steps(self) -> List[str]:
+        return list(self.suggestions or [])
+
+    @property
+    def severity(self) -> str:
+        status = (self.status or "").lower()
+        if status == "error":
+            return "high"
+        if status == "warning":
+            return "medium"
+        return "low"
+
+    @property
+    def description(self) -> str:
+        return ""
+
 
 class Report:
     """Represents a report of project analysis results."""
@@ -61,7 +86,7 @@ class Report:
             project: The project this report is for
         """
         self.project = project
-        self.generated_at = datetime.utcnow()
+        self.generated_at = datetime.now(timezone.utc)
         self.results: List[CheckResult] = []
         self.summary = {
             'total_checks': 0,
