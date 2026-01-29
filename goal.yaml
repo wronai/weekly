@@ -1,5 +1,5 @@
 # goal.yaml - Goal configuration file
-# Generated: 2026-01-29 15:13:26
+# Generated: 2026-01-29 15:13:39
 # Documentation: https://github.com/wronai/goal#configuration
 #
 # This file configures Goal's behavior for:
@@ -271,7 +271,7 @@ strategies:
       --benchmark-zipkin --benchmark-opentelemetry --benchmark-gatling --benchmark-jmeter
       --benchmark-k6 --benchmark-locust --benchmark-artillery
     build: poetry build
-    publish: poetry publish --build
+    publish: poetry build && poetry publish
     dependencies:
       file: requirements.txt
       lock: pip freeze > requirements.txt

@@ -1,3 +1,14 @@
+## [0.1.38] - 2026-01-29
+
+### Summary
+
+chore(goal): code relationship mapping
+
+### Config
+
+- config: update goal.yaml
+
+
 ## [0.1.37] - 2026-01-29
 
 ### Summary
