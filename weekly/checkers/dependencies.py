@@ -32,9 +32,6 @@ class DependenciesChecker(BaseChecker):
         Returns:
             CheckResult with dependencies-related findings
         """
-        if isinstance(project, Path):
-            project = Project(project)
-
         if not project.is_python_project:
             return None
 
@@ -58,6 +55,26 @@ class DependenciesChecker(BaseChecker):
 
         # Check for unpinned dependencies
         unpinned = self._find_unpinned_dependencies(deps)
+
+        # Check for vulnerabilities via pip-audit
+        vulnerabilities = self._run_pip_audit(project)
+
+        if vulnerabilities:
+            return CheckResult(
+                checker_name=self.name,
+                title=f"Found {len(vulnerabilities)} security vulnerabilities",
+                status="error",
+                details=(
+                    f"Vulnerability scan found {len(vulnerabilities)} issues:\n"
+                    + "\n".join([f"- {v}" for v in vulnerabilities])
+                ),
+                suggestions=[
+                    "Run 'pip-audit' manually to see detailed vulnerability reports",
+                    "Update the vulnerable packages to their latest secure versions",
+                    "Consider using a tool like Snyk or GitHub Dependency Graph for continuous monitoring",
+                ],
+                metadata={"vulnerabilities": vulnerabilities},
+            )
 
         if unpinned:
             return CheckResult(
@@ -173,15 +190,32 @@ class DependenciesChecker(BaseChecker):
                             name, _, constraint = self._parse_dep_spec(dep)
                             result["dependencies"].append((name, constraint or "any"))
 
-        # Check setup.py (simple regex-based parsing)
-        if project.setup_py:
-            # This is a very simplified parser and might miss some edge cases
-            content = project.setup_py.lower()
-
-            # Look for install_requires
-            if "install_requires" in content:
-                # This is a very naive approach - a real implementation would need to parse the Python AST
-                pass
+        # Check setup.py via AST parsing
+        setup_py_path = project.path / "setup.py"
+        if setup_py_path.exists():
+            try:
+                import ast
+                tree = ast.parse(setup_py_path.read_text(encoding="utf-8"))
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "setup":
+                        for keyword in node.keywords:
+                            if keyword.arg == "install_requires" and isinstance(keyword.value, ast.List):
+                                for elt in keyword.value.elts:
+                                    if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                                        name, _, constraint = self._parse_dep_spec(elt.value)
+                                        result["dependencies"].append((name, constraint or "any"))
+                            elif keyword.arg == "extras_require" and isinstance(keyword.value, ast.Dict):
+                                for val in keyword.value.values:
+                                    if isinstance(val, ast.List):
+                                        for elt in val.elts:
+                                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                                                name, _, constraint = self._parse_dep_spec(elt.value)
+                                                result["dependencies"].append((name, constraint or "any"))
+            except Exception:
+                # Fallback to naive parsing if AST fails
+                content = project.setup_py.lower()
+                if "install_requires" in content:
+                    pass
 
         # Check requirements.txt
         if project.requirements_txt:
@@ -253,3 +287,44 @@ class DependenciesChecker(BaseChecker):
         # In a real implementation, this would check PyPI or a vulnerability database
         # For now, we'll just return an empty list
         return []
+
+    def _run_pip_audit(self, project: Project) -> List[str]:
+        """Run pip-audit on the project to find vulnerabilities."""
+        import subprocess
+
+        vulnerabilities = []
+        try:
+            # Try to run pip-audit on the project path
+            # We look for requirements.txt or pyproject.toml
+            cmd = ["pip-audit", "--format", "json"]
+
+            # If it's a poetry project, we might want to use poetry export first or just audit the path
+            # pip-audit can audit pyproject.toml if it's PEP 621, or we can audit requirements.txt
+            
+            # Simple approach: audit the directory if pip-audit is installed
+            result = subprocess.run(
+                cmd + [str(project.path)],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            if result.returncode != 0 and result.stdout:
+                try:
+                    import json
+                    data = json.loads(result.stdout)
+                    # pip-audit JSON format: {"dependencies": [{"name": "...", "version": "...", "vulnerabilities": [...]}]}
+                    if "dependencies" in data:
+                        for dep in data["dependencies"]:
+                            if dep.get("vulnerabilities"):
+                                for vuln in dep["vulnerabilities"]:
+                                    vulnerabilities.append(f"{dep['name']} {dep['version']}: {vuln.get('id', 'Unknown Vuln')}")
+                except json.JSONDecodeError:
+                    pass
+        except FileNotFoundError:
+            # pip-audit not installed
+            pass
+        except Exception:
+            pass
+            
+        return vulnerabilities

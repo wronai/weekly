@@ -83,16 +83,23 @@ class GitRepo:
             # Get the last commit date
             result = self._run_git("log -1 --format=%cd --date=iso")
             if result.returncode == 0 and result.stdout.strip():
-                self.last_commit_date = datetime.strptime(
-                    result.stdout.strip().split()[0], "%Y-%m-%d"
-                )
+                try:
+                    self.last_commit_date = datetime.strptime(
+                        result.stdout.strip().split()[0], "%Y-%m-%d"
+                    )
+                except (ValueError, IndexError):
+                    pass
 
             # Get the remote URL
             result = self._run_git("remote get-url origin")
             if result.returncode == 0 and result.stdout.strip():
                 self.remote_url = result.stdout.strip()
-        except Exception as e:
+        except subprocess.SubprocessError:
+            # Git command failed, possibly not a git repo or git not installed
             pass
+        except Exception as e:
+            # Log other unexpected errors but don't crash the scanner
+            self.console.print(f"[yellow]Warning: Metadata extraction failed for {self.path}: {e}")
 
     def has_recent_changes(self, since: datetime) -> bool:
         """Check if the repository has changes since a specific date."""
@@ -233,8 +240,10 @@ class GitScanner:
                     continue
 
                 repos.append(repo)
-            except Exception as e:
+            except (ValueError, OSError) as e:
                 self.console.print(f"[yellow]Warning: Failed to process {git_dir}: {e}")
+            except Exception as e:
+                self.console.print(f"[red]Unexpected error processing {git_dir}: {e}")
 
         return repos
 

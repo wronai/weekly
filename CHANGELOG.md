@@ -1,23 +1,42 @@
+## [0.1.39] - 2026-02-15
+
+### Summary
+
+refactor(docs): commit message generator
+
+### Docs
+
+- docs: update TODO.md
+- docs: update architecture.md
+
+### Test
+
+- update tests/test_style_checker.py
+
+### Ci
+
+- config: update ci.yml
+
+### Other
+
+- config: update .pre-commit-config.yaml
+- config: update mkdocs.yml
+- update weekly/__init__.py
+- update weekly/checkers/ci_cd.py
+- update weekly/checkers/dependencies.py
+- update weekly/checkers/docs.py
+- update weekly/checkers/style.py
+- update weekly/checkers/testing.py
+- update weekly/cli.py
+- update weekly/core/report.py
+- ... and 2 more
+
+
 ## [0.1.38] - 2026-01-29
 
 ### Summary
 
 chore(goal): code relationship mapping
-
-### Config
-
-- config: update goal.yaml
-
-
-## [0.1.37] - 2026-01-29
-
-### Summary
-
-feat(goal): deep code analysis engine with 7 supporting modules
-
-### Test
-
-- update test_change.py
 
 ### Config
 

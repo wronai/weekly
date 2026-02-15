@@ -11,40 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 
-class CheckResult:
-    """Represents the result of a single check."""
-
-    def __init__(
-        self,
-        name: str,
-        description: str,
-        is_ok: bool,
-        message: str,
-        details: Optional[Any] = None,
-        next_steps: Optional[List[str]] = None,
-        severity: str = "medium",
-        metadata: Optional[Dict[str, Any]] = None,
-    ):
-        """Initialize a check result.
-
-        Args:
-            name: Name of the check
-            description: Description of the check
-            is_ok: Whether the check passed
-            message: Result message
-            details: Optional detailed results
-            next_steps: List of suggested next steps
-            severity: Severity level (low, medium, high)
-            metadata: Optional metadata dictionary
-        """
-        self.name = name
-        self.description = description
-        self.is_ok = is_ok
-        self.message = message
-        self.details = details
-        self.next_steps = next_steps or []
-        self.severity = severity
-        self.metadata = metadata or {}
+from weekly.core.report import CheckResult
 
 
 @dataclass

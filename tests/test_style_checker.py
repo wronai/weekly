@@ -12,6 +12,7 @@ import pytest
 
 from weekly.checkers.base import CheckResult, CheckSeverity
 from weekly.checkers.style import StyleChecker, StyleIssue
+from weekly.core.project import Project
 
 
 @pytest.fixture
@@ -38,7 +39,8 @@ def test_style_checker_with_valid_code(tmp_path, style_checker):
     test_file.write_text(code)
 
     # Run the check
-    result = style_checker.check(tmp_path)
+    project = Project(tmp_path)
+    result = style_checker.check(project)
 
     # Verify the result
     assert isinstance(result, CheckResult)
@@ -65,7 +67,8 @@ def test_black_check_with_invalid_formatting(tmp_path, style_checker):
         mock_run.return_value = mock_result
 
         # Run the check
-        result = style_checker.check(tmp_path)
+        project = Project(tmp_path)
+        result = style_checker.check(project)
 
     # Verify the result
     assert isinstance(result, CheckResult)
@@ -96,7 +99,8 @@ def test_isort_check_with_misordered_imports(tmp_path, style_checker):
         mock_run.return_value = mock_result
 
         # Run the check
-        result = style_checker.check(tmp_path)
+        project = Project(tmp_path)
+        result = style_checker.check(project)
 
     # Verify the result
     assert isinstance(result, CheckResult)
@@ -120,7 +124,8 @@ def test_flake8_check_with_style_issues(tmp_path, style_checker):
         mock_run.return_value = mock_result
 
         # Run the check
-        result = style_checker.check(tmp_path)
+        project = Project(tmp_path)
+        result = style_checker.check(project)
 
     # Verify the result
     assert isinstance(result, CheckResult)
@@ -149,7 +154,8 @@ def test_mypy_check_with_type_issues(tmp_path, style_checker):
         mock_run.return_value = mock_result
 
         # Run the check
-        result = style_checker.check(tmp_path)
+        project = Project(tmp_path)
+        result = style_checker.check(project)
 
     # Verify the result
     assert isinstance(result, CheckResult)

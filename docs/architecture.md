@@ -15,9 +15,9 @@ Weekly has two major feature areas:
 - **`weekly/git_report.py`**: HTML report generation for scanned repositories.
 - **`weekly/git_analyzer.py`**: commit history analysis for trend-style data.
 
-## Known architectural friction
+## Known architectural friction (Resolved)
 
-- Some checkers operate on `Project`, while `StyleChecker` operates on `Path`.
-- There are two `CheckResult` models (core report vs git report), which requires adapters.
-
-These are good targets for unification to simplify maintenance and reduce edge cases.
+- All checkers now consistently operate on `Project`.
+- `CheckResult` models have been unified into `weekly/core/report.py`, with compatibility aliases for legacy code.
+- CI/CD integration has been added via GitHub Actions.
+- Documentation build pipeline has been established using MkDocs.

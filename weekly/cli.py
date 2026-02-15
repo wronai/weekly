@@ -172,6 +172,47 @@ def _format_text_output(report: "Report", show_suggestions: bool = True) -> str:
     return "\n".join(lines)
 
 
+def _parse_since_date(since_str: Optional[str]) -> Optional[datetime]:
+    """Parse the 'since' string into a datetime object."""
+    if not since_str:
+        return None
+
+    since_str = since_str.lower().strip()
+    now = datetime.now()
+
+    # Handle relative dates
+    if "ago" in since_str or any(word in since_str for word in ["day", "week", "month", "year"]):
+        try:
+            # Basic relative parsing: "N days/weeks/months/years [ago]"
+            parts = since_str.split()
+            if not parts:
+                return None
+            
+            value = int(parts[0])
+            unit = parts[1] if len(parts) > 1 else "day"
+            
+            if unit.startswith("day"):
+                return now - timedelta(days=value)
+            elif unit.startswith("week"):
+                return now - timedelta(weeks=value)
+            elif unit.startswith("month"):
+                return now - timedelta(days=value * 30)  # Approximation
+            elif unit.startswith("year"):
+                return now - timedelta(days=value * 365)  # Approximation
+        except (ValueError, IndexError):
+            pass
+
+    # Handle absolute dates
+    date_formats = ["%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d", "%d.%m.%Y"]
+    for fmt in date_formats:
+        try:
+            return datetime.strptime(since_str, fmt)
+        except ValueError:
+            continue
+
+    return None
+
+
 @main.command()
 @click.argument(
     "root_dir",
@@ -232,25 +273,12 @@ def scan(
     """
     try:
         # Parse since date
-        since = None
-        if since_str:
-            if "day" in since_str.lower():
-                try:
-                    days = int(since_str.split()[0])
-                    since = datetime.now() - timedelta(days=days)
-                except (ValueError, IndexError):
-                    console.print(
-                        f"[yellow]Warning: Could not parse date '{since_str}'. Using default (7 days).[/]"
-                    )
-                    since = datetime.now() - timedelta(days=7)
-            else:
-                try:
-                    since = datetime.strptime(since_str, "%Y-%m-%d")
-                except ValueError:
-                    console.print(
-                        f"[yellow]Warning: Invalid date format '{since_str}'. Use YYYY-MM-DD or 'N days ago'.[/]"
-                    )
-                    return 1
+        since = _parse_since_date(since_str)
+        if since_str and not since:
+            console.print(
+                f"[yellow]Warning: Could not parse date '{since_str}'. Use YYYY-MM-DD, 'N days ago', 'N weeks ago', etc. Falling back to default (7 days).[/]"
+            )
+            since = datetime.now() - timedelta(days=7)
 
         if verbose:
             console.print(f"🔍 Scanning Git repositories in [bold]{root_dir}[/]")

@@ -66,9 +66,6 @@ class StyleChecker(BaseChecker):
 
     def check(self, project: Project) -> Optional[CheckResult]:
         """Run style checks on the given project."""
-        if isinstance(project, Path):
-            project = Project(project)
-
         path = project.path
         self.console.print(f"[bold]Running style checks on {path}...")
 

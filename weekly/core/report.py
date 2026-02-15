@@ -20,6 +20,7 @@ class CheckResult:
         details: str,
         suggestions: Optional[List[str]] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        description: str = "",
     ):
         """Initialize a check result.
 
@@ -30,6 +31,7 @@ class CheckResult:
             details: Detailed description of the check results
             suggestions: List of suggested actions to improve the project
             metadata: Additional metadata about the check result
+            description: Optional long description of the check
         """
         self.checker_name = checker_name
         self.title = title
@@ -37,6 +39,7 @@ class CheckResult:
         self.details = details
         self.suggestions = suggestions or []
         self.metadata = metadata or {}
+        self._description = description
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the check result to a dictionary."""
@@ -47,11 +50,16 @@ class CheckResult:
             "details": self.details,
             "suggestions": self.suggestions,
             "metadata": self.metadata,
+            "description": self.description,
         }
 
     @property
-    def is_ok(self) -> bool:
-        return (self.status or "").lower() == "success"
+    def name(self) -> str:
+        return self.checker_name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self.checker_name = value
 
     @property
     def message(self) -> str:
@@ -72,7 +80,7 @@ class CheckResult:
 
     @property
     def description(self) -> str:
-        return ""
+        return self._description or ""
 
 
 class Report:

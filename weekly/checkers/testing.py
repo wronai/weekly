@@ -32,15 +32,16 @@ class TestChecker(BaseChecker):
         Returns:
             CheckResult with testing-related findings
         """
-        if isinstance(project, Path):
-            project = Project(project)
-
         if not project.is_python_project:
             return None
 
         has_tests = project.has_tests
         has_test_config = self._has_test_config(project)
         test_coverage = self._check_test_coverage(project)
+
+        # Look for test files specifically
+        test_files = list(project.path.glob("**/test_*.py")) + list(project.path.glob("**/*_test.py"))
+        tests_discovered = len(test_files) > 0
 
         if not has_tests and not has_test_config:
             return CheckResult(
@@ -55,6 +56,22 @@ class TestChecker(BaseChecker):
                     "Add tests for your code in a 'tests' directory",
                     "Consider using pytest for testing (add pytest to your dev dependencies)",
                     "Add a pytest.ini or setup.cfg with test configuration",
+                ],
+            )
+
+        if not tests_discovered and has_test_config:
+            return CheckResult(
+                checker_name=self.name,
+                title="Test configuration found but no tests discovered",
+                status="warning",
+                details=(
+                    "Testing is configured, but no test files (test_*.py or *_test.py) "
+                    "were found in the project. Tests might be missing or not follow naming conventions."
+                ),
+                suggestions=[
+                    "Ensure test files are named correctly (e.g., test_*.py)",
+                    "Check if tests are in a directory excluded from scanning",
+                    "Add unit tests for your core logic",
                 ],
             )
 
@@ -148,14 +165,26 @@ class TestChecker(BaseChecker):
         Returns:
             Test coverage percentage as a float (0-100) or None if not available
         """
-        # Look for .coverage file or coverage.xml
-        coverage_files = [".coverage", "coverage.xml", "htmlcov/index.html"]
+        # Look for coverage.xml first as it's easiest to parse
+        coverage_xml = project.path / "coverage.xml"
+        if coverage_xml.exists():
+            try:
+                import xml.etree.ElementTree as ET
+
+                tree = ET.parse(coverage_xml)
+                root = tree.getroot()
+                # coverage.xml usually has line-rate attribute in the root <coverage> element
+                line_rate = root.get("line-rate")
+                if line_rate:
+                    return round(float(line_rate) * 100, 2)
+            except Exception:
+                pass
+
+        # Look for .coverage file or htmlcov/index.html
+        coverage_files = [".coverage", "htmlcov/index.html"]
 
         for cov_file in coverage_files:
             if (project.path / cov_file).exists():
-                # In a real implementation, we would parse the coverage file
-                # For now, we'll return None to indicate coverage data exists
-                # but we couldn't determine the exact percentage
                 return None
 
         # Check for coverage in setup.cfg or .coveragerc

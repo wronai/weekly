@@ -32,7 +32,6 @@ from .core.project import Project
 from .core.repo_status import RepoStatus
 from .core.report import CheckResult, Report
 from .git_analyzer import CommitStats, GitAnalyzer
-from .git_report import CheckResult as GitCheckResult
 from .git_report import GitReportGenerator, RepoInfo
 
 # Import Git scanner and report generator
@@ -62,5 +61,4 @@ __all__ = [
     "ScanResult",
     "GitReportGenerator",
     "RepoInfo",
-    "GitCheckResult",
 ]

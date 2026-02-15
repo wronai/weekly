@@ -30,9 +30,6 @@ class CIChecker(BaseChecker):
         Returns:
             CheckResult with CI/CD-related findings
         """
-        if isinstance(project, Path):
-            project = Project(project)
-
         ci_config = self._detect_ci_config(project)
         cd_config = self._detect_cd_config(project)
 

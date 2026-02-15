@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/weekly?logo=pypi&logoColor=white&style=for-the-badge)](https://pypi.org/project/weekly/)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/weekly?logo=pypi&logoColor=white&style=for-the-badge)](https://pypi.org/project/weekly/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/weekly?logo=python&logoColor=white&style=for-the-badge)](https://pypi.org/project/weekly/)
-[![License](https://img.shields.io/github/license/wronai/weekly?logo=apache&style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Documentation](https://img.shields.io/readthedocs/weekly/latest?logo=readthedocs&logoColor=white&style=for-the-badge)](https://weekly.readthedocs.io/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge&logo=python&logoColor=white)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/imports-isort-%231674b1?style=for-the-badge&labelColor=ef8336)](https://pycqa.github.io/isort/)
@@ -365,7 +365,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
+Apache License 2.0 - see [LICENSE](LICENSE) for details.
+
+## Author
+
+Created by **Tom Sapletta** - [tom@sapletta.com](mailto:tom@sapletta.com)
 
 ## Acknowledgments
 
