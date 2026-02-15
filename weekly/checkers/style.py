@@ -59,15 +59,13 @@ class StyleChecker(BaseChecker):
         Args:
             config: Optional configuration dictionary for the checker
         """
-        # Store config
-        self.config = config or {}
-        self.console = Console()
+        super().__init__(config)
         self.issues: List[StyleIssue] = []
 
     def check(self, project: Project) -> Optional[CheckResult]:
         """Run style checks on the given project."""
         path = project.path
-        self.console.print(f"[bold]Running style checks on {path}...")
+        self.logger.info(f"Running style checks on {path}...")
 
         # Reset issues
         self.issues = []
@@ -83,7 +81,7 @@ class StyleChecker(BaseChecker):
 
     def _run_black_check(self, path: Path) -> None:
         """Run Black formatter check."""
-        self.console.print("  - Checking code formatting with Black...")
+        self.logger.info("  - Checking code formatting with Black...")
         try:
             result = subprocess.run(
                 ["black", "--check", "--diff", str(path)],
@@ -97,7 +95,7 @@ class StyleChecker(BaseChecker):
                 self._parse_black_output(result.stderr)
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.console.print(f"[yellow]Warning: Failed to run Black: {e}[/]")
+            self.logger.warning(f"Failed to run Black: {e}")
 
     def _parse_black_output(self, output: str) -> None:
         """Parse Black output and extract issues."""
@@ -123,7 +121,7 @@ class StyleChecker(BaseChecker):
 
     def _run_isort_check(self, path: Path) -> None:
         """Run isort import sorter check."""
-        self.console.print("  - Checking import sorting with isort...")
+        self.logger.info("  - Checking import sorting with isort...")
         try:
             result = subprocess.run(
                 ["isort", "--check-only", "--diff", str(path)],
@@ -137,7 +135,7 @@ class StyleChecker(BaseChecker):
                 self._parse_isort_output(result.stderr)
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.console.print(f"[yellow]Warning: Failed to run isort: {e}[/]")
+            self.logger.warning(f"Failed to run isort: {e}")
 
     def _parse_isort_output(self, output: str) -> None:
         """Parse isort output and extract issues."""
@@ -157,7 +155,7 @@ class StyleChecker(BaseChecker):
 
     def _run_flake8_check(self, path: Path) -> None:
         """Run flake8 linter check."""
-        self.console.print("  - Running Flake8 linter...")
+        self.logger.info("  - Running Flake8 linter...")
         try:
             result = subprocess.run(
                 ["flake8", str(path)],
@@ -171,7 +169,7 @@ class StyleChecker(BaseChecker):
                 self._parse_flake8_output(result.stdout)
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.console.print(f"[yellow]Warning: Failed to run flake8: {e}[/]")
+            self.logger.warning(f"Failed to run flake8: {e}")
 
     def _parse_flake8_output(self, output: str) -> None:
         """Parse flake8 output and extract issues."""
@@ -209,14 +207,12 @@ class StyleChecker(BaseChecker):
                         )
                 except (ValueError, IndexError) as e:
                     # Skip malformed lines
-                    self.console.print(
-                        f"[yellow]Warning: Failed to parse flake8 output line: {line}[/]"
-                    )
+                    self.logger.warning(f"Failed to parse flake8 output line: {line}")
                     continue
 
     def _run_mypy_check(self, path: Path) -> None:
         """Run mypy static type checker."""
-        self.console.print("  - Running mypy type checker...")
+        self.logger.info("  - Running mypy type checker...")
         try:
             result = subprocess.run(
                 ["mypy", str(path)],
@@ -230,7 +226,7 @@ class StyleChecker(BaseChecker):
                 self._parse_mypy_output(result.stdout)
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.console.print(f"[yellow]Warning: Failed to run mypy: {e}[/]")
+            self.logger.warning(f"Failed to run mypy: {e}")
 
     def _parse_mypy_output(self, output: str) -> None:
         """Parse mypy output and extract issues."""
@@ -345,10 +341,6 @@ class StyleChecker(BaseChecker):
                 str(len(issues)),
                 f"Found {len(issues)} issue{'s' if len(issues) != 1 else ''} in {tool}",
             )
-
-        # Print the table to console
-        self.console.print()
-        self.console.print(Panel.fit(table))
 
         return CheckResult(
             checker_name=self.name,

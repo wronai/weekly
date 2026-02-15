@@ -25,11 +25,14 @@ from rich.progress import (
 from rich.table import Table
 from rich.tree import Tree
 
+from weekly.core.logger import get_logger
 from weekly.core.project import Project
 from weekly.core.report import CheckResult as CoreCheckResult
 from weekly.git_change_analyzer import ChangeSummary, GitChangeAnalyzer
 from weekly.git_report import CheckResult as ReportCheckResult
 from weekly.git_report import GitReportGenerator, RepoInfo
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -99,7 +102,7 @@ class GitRepo:
             pass
         except Exception as e:
             # Log other unexpected errors but don't crash the scanner
-            self.console.print(f"[yellow]Warning: Metadata extraction failed for {self.path}: {e}")
+            logger.warning(f"Metadata extraction failed for {self.path}: {e}")
 
     def has_recent_changes(self, since: datetime) -> bool:
         """Check if the repository has changes since a specific date."""
@@ -194,7 +197,6 @@ class GitScanner:
         self.since = since or (datetime.now() - timedelta(days=7))
         self.recursive = recursive
         self.jobs = jobs
-        self.console = Console()
         self.report_generator = GitReportGenerator()
 
     def find_git_repos(self) -> List[GitRepo]:
@@ -202,10 +204,10 @@ class GitScanner:
         repos: List[GitRepo] = []
 
         if not self.root_dir.exists():
-            self.console.print(f"[red]Error: Directory not found: {self.root_dir}")
+            logger.error(f"Directory not found: {self.root_dir}")
             return repos
 
-        self.console.print(f"[bold]Scanning for Git repositories in {self.root_dir}...")
+        logger.info(f"Scanning for Git repositories in {self.root_dir}...")
 
         # Find all .git directories
         git_dirs = []
@@ -241,9 +243,9 @@ class GitScanner:
 
                 repos.append(repo)
             except (ValueError, OSError) as e:
-                self.console.print(f"[yellow]Warning: Failed to process {git_dir}: {e}")
+                logger.warning(f"Failed to process {git_dir}: {e}")
             except Exception as e:
-                self.console.print(f"[red]Unexpected error processing {git_dir}: {e}")
+                logger.error(f"Unexpected error processing {git_dir}: {e}")
 
         return repos
 
@@ -254,7 +256,7 @@ class GitScanner:
         try:
             # Analyze changes first if since date is specified
             if self.since:
-                self.console.print(
+                logger.info(
                     f"  📈 Analyzing changes since {self.since.strftime('%Y-%m-%d')}..."
                 )
                 analyzer = GitChangeAnalyzer(repo.path)
@@ -271,8 +273,8 @@ class GitScanner:
                     self.since, changelog_path
                 )
                 if not used_git_cliff:
-                    self.console.print(
-                        "  [yellow]Using fallback changelog generation...[/]"
+                    logger.warning(
+                        "  Using fallback changelog generation..."
                     )
                     summary_text = analyzer.generate_summary_report(
                         result.change_summary
@@ -295,7 +297,7 @@ class GitScanner:
                 except OSError:
                     result.changelog_excerpt = None
 
-                self.console.print(f"  📝 Changelog saved to {changelog_path}")
+                logger.info(f"  📝 Changelog saved to {changelog_path}")
 
             # Import checkers dynamically to avoid circular imports
             from weekly.checkers import (
@@ -303,6 +305,8 @@ class GitScanner:
                 CodeQualityChecker,
                 DependenciesChecker,
                 DocumentationChecker,
+                PackagingChecker,
+                SecurityChecker,
                 StyleChecker,
                 TestChecker,
             )
@@ -316,6 +320,8 @@ class GitScanner:
                 DocumentationChecker(),
                 TestChecker(),
                 CIChecker(),
+                SecurityChecker(),
+                PackagingChecker(),
             ]
 
             # Run all checkers
@@ -324,8 +330,8 @@ class GitScanner:
                     check_result = checker.check(project)
                     result.results[checker.name] = check_result
                 except Exception as e:
-                    self.console.print(
-                        f"[yellow]Warning: Checker {checker.name} failed for {repo.path}: {e}"
+                    logger.warning(
+                        f"Checker {checker.name} failed for {repo.path}: {e}"
                     )
 
             # Generate report for this repository
@@ -333,7 +339,7 @@ class GitScanner:
 
         except Exception as e:
             result.error = str(e)
-            self.console.print(f"[red]Error scanning {repo.path}: {e}")
+            logger.error(f"Error scanning {repo.path}: {e}")
 
         return result
 
@@ -342,10 +348,10 @@ class GitScanner:
         repos = self.find_git_repos()
 
         if not repos:
-            self.console.print("[yellow]No Git repositories found.")
+            logger.warning("No Git repositories found.")
             return []
 
-        self.console.print(f"[green]Found {len(repos)} repositories to scan.")
+        logger.info(f"Found {len(repos)} repositories to scan.")
 
         results: List[ScanResult] = []
 
@@ -361,7 +367,6 @@ class GitScanner:
                 "[progress.description]{task.description}",
                 BarColumn(),
                 TaskProgressColumn(),
-                console=self.console,
             ) as progress:
                 task = progress.add_task("Scanning repositories...", total=len(futures))
 
@@ -373,17 +378,18 @@ class GitScanner:
                             # Try to access attributes that might cause the error
                             _ = result.repo
                             _ = result.results
-                            _ = result.error
+                            if result.error:
+                                logger.error(f"Error in scan result for {repo.path}: {result.error}")
                             results.append(result)
                         except Exception as e:
-                            self.console.print(
-                                f"[red]Error processing result for {repo.path}: {e}"
+                            logger.error(
+                                f"Error processing result for {repo.path}: {e}"
                             )
                             import traceback
 
                             traceback.print_exc()
                     except Exception as e:
-                        self.console.print(f"[red]Error scanning {repo.path}: {e}")
+                        logger.error(f"Error scanning {repo.path}: {e}")
                         import traceback
 
                         traceback.print_exc()
@@ -472,27 +478,25 @@ class GitScanner:
 
                 # Pass metadata directly, don't wrap in another dict
                 check_results[name] = ReportCheckResult(
-                    name=name,
-                    description="",
-                    is_ok=is_ok,
-                    message=check_result.title,
+                    checker_name=name,
+                    title=check_result.title,
+                    status=check_result.status,
                     details=check_result.details,
-                    next_steps=list(check_result.suggestions or []),
-                    severity=severity,
-                    metadata=check_result.metadata,  # Pass metadata directly
+                    suggestions=list(check_result.suggestions or []),
+                    metadata=check_result.metadata,
+                    description="",
                 )
                 continue
 
             # Fallback for any other checker result interface
             check_results[name] = ReportCheckResult(
-                name=name,
-                description=getattr(check_result, "description", ""),
-                is_ok=getattr(check_result, "is_ok", False),
-                message=getattr(check_result, "message", ""),
-                details=getattr(check_result, "details", None),
-                next_steps=getattr(check_result, "next_steps", []),
-                severity="high" if not getattr(check_result, "is_ok", True) else "low",
+                checker_name=name,
+                title=getattr(check_result, "message", ""),
+                status="success" if getattr(check_result, "is_ok", False) else "error",
+                details=getattr(check_result, "details", ""),
+                suggestions=getattr(check_result, "next_steps", []),
                 metadata=getattr(check_result, "metadata", None),
+                description=getattr(check_result, "description", ""),
             )
 
         # Add changelog information if available
@@ -502,16 +506,14 @@ class GitScanner:
 
             # Add as a special check result
             check_results["changelog"] = ReportCheckResult(
-                name="changelog",
-                description="Recent changes and commits",
-                is_ok=True,
-                message=f"Found {len(result.change_summary.commits)} commits since {self.since.strftime('%Y-%m-%d')}",
+                checker_name="changelog",
+                title=f"Found {len(result.change_summary.commits)} commits since {self.since.strftime('%Y-%m-%d')}",
+                status="success",
                 details=changelog_info,
-                next_steps=[
+                suggestions=[
                     f"View full changelog: {output_dir}/changelog.md",
                     "Review recent commits for potential issues",
                 ],
-                severity="info",
                 metadata={
                     "total_commits": len(result.change_summary.commits),
                     "files_changed": result.change_summary.total_files,
@@ -522,6 +524,7 @@ class GitScanner:
                     "changelog_generator": result.changelog_generator,
                     "changelog_excerpt": result.changelog_excerpt,
                 },
+                description="Recent changes and commits",
             )
 
         # Generate the report
@@ -532,34 +535,43 @@ class GitScanner:
             title=f"Weekly Report - {repo.org}/{repo.name}",
         )
 
-        # Create a symlink to the latest report
-        latest_link = output_dir / "latest.html"
+        # Create symlinks to the latest reports
+        for suffix in [".html", ".md", ".llm.md"]:
+            target_file = report_path.with_suffix(suffix)
+            if suffix == ".llm.md":
+                # Special case for .llm.md because report_path.with_suffix(".llm.md") 
+                # might result in timestamp.llm.md if report_path is timestamp.html
+                # Wait, Path("foo.html").with_suffix(".md") -> "foo.md"
+                # Path("foo.html").with_suffix(".llm.md") -> "foo.llm.md"
+                pass
+            
+            latest_link = output_dir / f"latest{suffix}"
 
-        # Remove existing symlink if it exists
-        if latest_link.exists() or latest_link.is_symlink():
+            # Remove existing symlink if it exists
+            if latest_link.exists() or latest_link.is_symlink():
+                try:
+                    latest_link.unlink()
+                    logger.info(f"Removed existing symlink: {latest_link}")
+                except OSError as e:
+                    logger.warning(
+                        f"Could not remove existing {latest_link.name}: {e}"
+                    )
+
+            # Create new symlink
             try:
-                latest_link.unlink()
-                self.console.print(f"[yellow]Removed existing symlink: {latest_link}")
+                if target_file.exists():
+                    # Use absolute path for the target to avoid any relative path issues
+                    target_path = target_file.absolute()
+                    latest_link.symlink_to(target_path)
+                    logger.info(
+                        f"Created symlink: {latest_link} -> {target_path}"
+                    )
             except OSError as e:
-                self.console.print(
-                    f"[yellow]Warning: Could not remove existing latest.html: {e}"
+                logger.warning(
+                    f"Could not create {latest_link.name} symlink: {e}"
                 )
-
-        # Create new symlink
-        try:
-            # Use absolute path for the target to avoid any relative path issues
-            target_path = report_path.absolute()
-            latest_link.symlink_to(target_path)
-            self.console.print(
-                f"[green]Created symlink: {latest_link} -> {target_path}"
-            )
-        except OSError as e:
-            self.console.print(
-                f"[yellow]Warning: Could not create latest.html symlink: {e}"
-            )
-            import traceback
-
-            traceback.print_exc()
+                import traceback
+                traceback.print_exc()
 
         return report_path
 

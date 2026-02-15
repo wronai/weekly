@@ -8,11 +8,18 @@ from ..checkers.ci_cd import CIChecker
 from ..checkers.code_quality import CodeQualityChecker
 from ..checkers.dependencies import DependenciesChecker
 from ..checkers.docs import DocumentationChecker
+from ..checkers.packaging import PackagingChecker
+from ..checkers.release_readiness import ReleaseReadinessChecker
+from ..checkers.security import SecurityChecker
+from ..checkers.style import StyleChecker
 
 # Import all checkers
+from ..core.logger import get_logger
 from ..checkers.testing import TestChecker
 from .project import Project
 from .report import CheckResult, Report
+
+logger = get_logger(__name__)
 
 
 def analyze_project(project_path: Path) -> Report:
@@ -30,11 +37,15 @@ def analyze_project(project_path: Path) -> Report:
 
     # Register all available checkers
     checkers = [
+        StyleChecker(),
         TestChecker(),
         DocumentationChecker(),
         CIChecker(),
         DependenciesChecker(),
         CodeQualityChecker(),
+        SecurityChecker(),
+        PackagingChecker(),
+        ReleaseReadinessChecker(),
     ]
 
     # Run all checkers
@@ -45,6 +56,6 @@ def analyze_project(project_path: Path) -> Report:
                 report.add_result(result)
         except Exception as e:
             # Log the error but continue with other checkers
-            print(f"Error running {checker.__class__.__name__}: {str(e)}")
+            logger.error(f"Error running {checker.__class__.__name__}: {str(e)}")
 
     return report

@@ -12,7 +12,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from rich.console import Console
+from .core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -52,7 +54,6 @@ class GitChangeAnalyzer:
             repo_path: Path to the Git repository
         """
         self.repo_path = Path(repo_path)
-        self.console = Console()
 
         # Conventional commit patterns
         self.commit_patterns = {
@@ -104,7 +105,7 @@ class GitChangeAnalyzer:
         )
 
         if result.returncode != 0:
-            self.console.print(f"[red]Error getting git log: {result.stderr}")
+            logger.error(f"Error getting git log: {result.stderr}")
             return []
 
         commits = []
@@ -305,7 +306,18 @@ sort_commits = "oldest"
             if not oldest_commit:
                 return False
             oldest_commit_hash = oldest_commit[0].strip()
-            git_range = f"{oldest_commit_hash}^..HEAD"
+            
+            # Check if this is the root commit (has no parents)
+            is_root = self._run_git(f"rev-list --parents -n 1 {oldest_commit_hash}").stdout.strip() == oldest_commit_hash
+            
+            if is_root:
+                git_range = oldest_commit_hash + "..HEAD"
+                # If there's only one commit, HEAD is oldest_commit_hash, so range might be empty.
+                # In that case, we can just use HEAD.
+                if self._run_git("rev-parse HEAD").stdout.strip() == oldest_commit_hash:
+                    git_range = oldest_commit_hash
+            else:
+                git_range = f"{oldest_commit_hash}^..HEAD"
 
             # Run git-cliff in the repository
             try:
@@ -317,12 +329,12 @@ sort_commits = "oldest"
                     cwd=self.repo_path,
                 )
             except FileNotFoundError:
-                self.console.print(
-                    "[yellow]git-cliff not found; skipping git-cliff changelog generation[/]"
+                logger.warning(
+                    "git-cliff not found; skipping git-cliff changelog generation"
                 )
                 return False
             except subprocess.SubprocessError as e:
-                self.console.print(f"[yellow]git-cliff failed to run: {e}[/]")
+                logger.warning(f"git-cliff failed to run: {e}")
                 return False
 
             if result.returncode == 0:
@@ -332,7 +344,7 @@ sort_commits = "oldest"
                     f.write(result.stdout)
                 return True
             else:
-                self.console.print(f"[red]git-cliff error: {result.stderr}")
+                logger.error(f"git-cliff error: {result.stderr}")
                 return False
         finally:
             # Clean up config

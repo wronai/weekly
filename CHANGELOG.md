@@ -1,3 +1,38 @@
+## [0.1.40] - 2026-02-15
+
+### Summary
+
+refactor(docs): code analysis engine
+
+### Docs
+
+- docs: update TODO.md
+- docs: update checkers.md
+
+### Test
+
+- update tests/benchmark_scan.py
+- update tests/test_scan_integration.py
+
+### Build
+
+- update pyproject.toml
+
+### Other
+
+- update weekly/checkers/__init__.py
+- update weekly/checkers/base.py
+- update weekly/checkers/dependencies.py
+- update weekly/checkers/packaging.py
+- update weekly/checkers/release_readiness.py
+- update weekly/checkers/security.py
+- update weekly/checkers/style.py
+- update weekly/core/analyzer.py
+- update weekly/core/logger.py
+- update weekly/core/report.py
+- ... and 6 more
+
+
 ## [0.1.39] - 2026-02-15
 
 ### Summary

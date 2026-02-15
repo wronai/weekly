@@ -4,10 +4,14 @@ Base checker class for Weekly project analysis.
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
+from ..core.logger import get_logger
 from ..core.project import Project
 from ..core.report import CheckResult
+
+if TYPE_CHECKING:
+    from logging import Logger
 
 
 class CheckSeverity(str, Enum):
@@ -22,6 +26,15 @@ class CheckSeverity(str, Enum):
 
 class BaseChecker(ABC):
     """Abstract base class for all project checkers."""
+
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize the checker.
+
+        Args:
+            config: Optional configuration dictionary for the checker
+        """
+        self.config = config or {}
+        self.logger: "Logger" = get_logger(f"weekly.checker.{self.name}")
 
     @property
     @abstractmethod

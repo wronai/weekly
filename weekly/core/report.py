@@ -54,6 +54,10 @@ class CheckResult:
         }
 
     @property
+    def is_ok(self) -> bool:
+        return (self.status or "").lower() == "success"
+
+    @property
     def name(self) -> str:
         return self.checker_name
 

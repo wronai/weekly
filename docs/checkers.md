@@ -20,6 +20,16 @@ Weekly checkers produce a `CheckResult` that is later rendered by the reporter.
 - **Code Quality** (`weekly/checkers/code_quality.py`)
   - Detects formatters/linters/type checkers and looks for common issues.
 
+- **Security** (`weekly/checkers/security.py`)
+  - Detects hardcoded secrets (API keys, tokens, private keys).
+  - Flags usage of insecure functions like `eval()`, `exec()`, or `os.system()`.
+  - Checks for sensitive files committed to the repository (e.g., `.env`).
+
+- **Packaging** (`weekly/checkers/packaging.py`)
+  - Checks for PEP 517/518 compliance (build-system in `pyproject.toml`).
+  - Validates essential distribution metadata (name, version, authors, etc.).
+  - Verifies README linkage in package configuration.
+
 - **Style** (`weekly/checkers/style.py`)
   - Runs external tools (Black/isort/flake8/mypy) and collects issues.
 

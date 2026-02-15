@@ -8,7 +8,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from .core.logger import get_logger
 from .core.repo_status import RepoStatus
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -103,7 +106,7 @@ class GitAnalyzer:
             return commits
 
         except subprocess.CalledProcessError as e:
-            print(f"Error getting commit history: {e}")
+            logger.error(f"Error getting commit history: {e}")
             return []
 
     def analyze(self, since_days: int = 30) -> RepoStatus:

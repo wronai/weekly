@@ -233,6 +233,13 @@ class DependenciesChecker(BaseChecker):
         if not spec:
             return "", "", ""
 
+        # Handle environment markers (PEP 508)
+        marker = ""
+        if ";" in spec:
+            spec, marker = spec.split(";", 1)
+            spec = spec.strip()
+            marker = marker.strip()
+
         # Handle extras
         extras = ""
         if "[" in spec and "]" in spec:

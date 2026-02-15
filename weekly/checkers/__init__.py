@@ -7,6 +7,9 @@ from .ci_cd import CIChecker
 from .code_quality import CodeQualityChecker
 from .dependencies import DependenciesChecker
 from .docs import DocumentationChecker
+from .packaging import PackagingChecker
+from .release_readiness import ReleaseReadinessChecker
+from .security import SecurityChecker
 from .style import StyleChecker
 from .testing import TestChecker
 
@@ -18,4 +21,7 @@ __all__ = [
     "DependenciesChecker",
     "CodeQualityChecker",
     "StyleChecker",
+    "SecurityChecker",
+    "PackagingChecker",
+    "ReleaseReadinessChecker",
 ]

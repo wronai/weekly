@@ -598,15 +598,25 @@ class GitReportGenerator:
         Returns:
             Rendered HTML as a string
         """
-        # This is a simplified version - in a real implementation, you would use a templating engine
-        # like Jinja2 with proper template files
+        try:
+            from jinja2 import Environment, FileSystemLoader
+            import os
 
-        if template_name == "repo_report.html":
-            return GitReportGenerator._render_repo_report(context)
-        elif template_name == "summary_report.html":
-            return GitReportGenerator._render_summary_report(context)
-        else:
-            raise ValueError(f"Unknown template: {template_name}")
+            # Get the directory of the current file
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            template_dir = os.path.join(current_dir, "templates")
+
+            env = Environment(loader=FileSystemLoader(template_dir))
+            template = env.get_template(template_name)
+            return template.render(**context)
+        except ImportError:
+            # Fallback to legacy rendering if Jinja2 is not installed
+            if template_name == "repo_report.html":
+                return GitReportGenerator._render_repo_report(context)
+            elif template_name == "summary_report.html":
+                return GitReportGenerator._render_summary_report(context)
+            else:
+                raise ValueError(f"Unknown template: {template_name}")
 
     @staticmethod
     def _render_repo_report(context: Dict[str, Any]) -> str:

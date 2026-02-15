@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 20px; color: #333; background-color: #f8f9fa; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { margin: 0; color: #2c3e50; }
+        .repo-info { background: #f8f9fa; padding: 20px; border-radius: 6px; margin-bottom: 30px; border-left: 5px solid #007bff; }
+        .repo-info h2 { margin-top: 0; color: #007bff; }
+        .status-badge { margin: 15px 0; }
+        .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; color: white; font-weight: bold; font-size: 0.9em; text-transform: uppercase; }
+        .badge-success { background: #28a745; }
+        .badge-error { background: #dc3545; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #666; font-weight: 600; text-transform: uppercase; font-size: 0.85em; }
+        tr:hover { background-color: #fcfcfc; }
+        .status-icon { font-weight: bold; margin-right: 8px; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        pre { background: #f1f3f5; padding: 15px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; font-family: 'Cascadia Code', 'Courier New', Courier, monospace; font-size: 0.9em; }
+        .issue-list { max-height: 500px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; background: #fff; }
+        .tool-section { margin-bottom: 25px; }
+        .tool-header { background: #e9ecef; padding: 10px 15px; font-weight: bold; border-radius: 4px; margin-bottom: 15px; border-bottom: 2px solid #dee2e6; }
+        .issue-item { margin-bottom: 12px; padding: 12px; background: #fff; border-radius: 4px; border: 1px solid #eee; border-left: 4px solid #dc3545; transition: transform 0.1s; }
+        .issue-item:hover { transform: translateX(5px); }
+        .issue-file { font-family: monospace; font-weight: bold; color: #0056b3; margin-bottom: 5px; }
+        .issue-code { font-family: monospace; background: #f8f9fa; padding: 2px 6px; border-radius: 3px; font-size: 0.85em; border: 1px solid #ddd; }
+        .footer { margin-top: 50px; text-align: center; color: #999; font-size: 0.85em; border-top: 1px solid #eee; padding-top: 20px; }
+        ul { padding-left: 20px; margin: 0; }
+        li { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ title }}</h1>
+            <p>Generated on {{ timestamp }}</p>
+        </div>
+        
+        <div class="repo-info">
+            <h2>{{ repo_info.org }}/{{ repo_info.name }}</h2>
+            <p><strong>Branch:</strong> {{ repo_info.branch }}</p>
+            <p><strong>Path:</strong> <code>{{ repo_info.path }}</code></p>
+            <div class="status-badge">
+                {% if not has_errors %}
+                <span class="badge badge-success">All checks passed</span>
+                {% else %}
+                <span class="badge badge-error">Issues found</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <h2>Check Results</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 15%">Check</th>
+                    <th style="width: 20%">Status</th>
+                    <th style="width: 45%">Details</th>
+                    <th style="width: 20%">Next Steps</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results %}
+                <tr class="{{ 'success-row' if result.is_ok else 'error-row' }}">
+                    <td><strong>{{ result.name|capitalize }}</strong></td>
+                    <td>
+                        <span class="status-icon {{ 'success' if result.is_ok else 'error' }}">
+                            {{ '✓' if result.is_ok else '✗' }}
+                        </span>
+                        {{ result.message }}
+                    </td>
+                    <td>
+                        {% if result.details %}
+                            {% if result.details is mapping and 'issues_data' in result.details %}
+                                <div class='issue-list'>
+                                    {% for tool, issues in result.details.issues_data.items() %}
+                                        <div class='tool-section'>
+                                            <div class='tool-header'>{{ tool|upper }} - {{ issues|length }} issues</div>
+                                            {% for issue in issues[:100] %}
+                                                <div class='issue-item'>
+                                                    <div class='issue-file'>{{ issue.file }}:{{ issue.line }}</div>
+                                                    <div><span class='issue-code'>{{ issue.code }}</span> - {{ issue.message }}</div>
+                                                    <div style='margin-top: 8px; font-size: 0.85em; color: #666;'>
+                                                        <strong>Fix:</strong> Run <code>{{ tool|lower }}</code> to address this issue
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                            {% if issues|length > 100 %}
+                                                <div style='text-align: center; padding: 10px; color: #999;'>... and {{ issues|length - 100 }} more issues</div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <pre>{{ result.details }}</pre>
+                            {% endif %}
+                        {% else %}
+                            <span style="color: #999;">No details available</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if result.next_steps %}
+                            <ul>
+                            {% for step in result.next_steps %}
+                                <li>{{ step }}</li>
+                            {% endfor %}
+                            </ul>
+                        {% else %}
+                            <span style="color: #999;">No steps recommended</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            <p>Report generated by <strong>Weekly</strong> &bull; {{ timestamp }}</p>
+        </div>
+    </div>
+</body>
+</html>
