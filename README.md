@@ -24,20 +24,17 @@ Weekly is a comprehensive Python project quality analyzer that helps developers 
 
 ## ✨ Features
 
-- 🧪 **Test Coverage Analysis**: Check test coverage and test configuration
+- 🧪 **Test Coverage Analysis**: Check test coverage and test configuration (now parses `coverage.xml`)
 - 📚 **Documentation Check**: Verify README, LICENSE, CHANGELOG, and API docs
 - 🔄 **CI/CD Integration**: Detect CI/CD configuration and best practices
-- 📦 **Dependency Analysis**: Identify outdated or vulnerable dependencies
+- 📦 **Dependency Analysis**: Identify outdated or vulnerable dependencies (now with `pip-audit` integration and AST parsing)
 - 🛠️ **Code Quality**: Check for code style, formatting, and common issues
+- 🔒 **Security Checks**: Detect hardcoded secrets and insecure function usage
+- 📦 **Packaging Check**: Verify PEP 517/518 compliance and distribution metadata
+- 🚀 **Release Readiness**: Check version consistency and changelog status
 - 📊 **Interactive Reports**: Generate detailed reports in multiple formats (JSON, Markdown, Text, HTML)
-- 🔍 **Extensible Architecture**: Easy to add custom checkers and rules
-- 🚀 **Fast and Lightweight**: Minimal dependencies, fast analysis
-- 🔄 **Git Integration**: Works seamlessly with Git repositories
-- 🔍 **Multi-Repo Scanning**: Scan multiple Git repositories in a directory structure
-- 📅 **Date-based Filtering**: Only analyze repositories with recent changes
-- 📑 **HTML Reports**: Beautiful, interactive HTML reports with drill-down capabilities
-- 🔒 **Security Checks**: Identify potential security issues in your code
-- 📈 **Trend Analysis**: Track code quality metrics over time
+- 🔍 **Multi-Repo Scanning**: Scan multiple Git repositories with parallel processing
+- 📅 **Date-based Filtering**: Flexible date parsing for analyzing recent changes
 
 ## 🔍 Git Repository Scanning
 

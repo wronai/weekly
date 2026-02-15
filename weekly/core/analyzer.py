@@ -12,10 +12,10 @@ from ..checkers.packaging import PackagingChecker
 from ..checkers.release_readiness import ReleaseReadinessChecker
 from ..checkers.security import SecurityChecker
 from ..checkers.style import StyleChecker
+from ..checkers.testing import TestChecker
 
 # Import all checkers
 from ..core.logger import get_logger
-from ..checkers.testing import TestChecker
 from .project import Project
 from .report import CheckResult, Report
 

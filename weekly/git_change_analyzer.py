@@ -306,10 +306,15 @@ sort_commits = "oldest"
             if not oldest_commit:
                 return False
             oldest_commit_hash = oldest_commit[0].strip()
-            
+
             # Check if this is the root commit (has no parents)
-            is_root = self._run_git(f"rev-list --parents -n 1 {oldest_commit_hash}").stdout.strip() == oldest_commit_hash
-            
+            is_root = (
+                self._run_git(
+                    f"rev-list --parents -n 1 {oldest_commit_hash}"
+                ).stdout.strip()
+                == oldest_commit_hash
+            )
+
             if is_root:
                 git_range = oldest_commit_hash + "..HEAD"
                 # If there's only one commit, HEAD is oldest_commit_hash, so range might be empty.

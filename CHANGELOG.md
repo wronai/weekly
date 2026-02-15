@@ -1,3 +1,44 @@
+## [0.1.41] - 2026-02-15
+
+### Summary
+
+refactor(tests): code analysis engine
+
+### Docs
+
+- docs: update README
+
+### Test
+
+- update tests/benchmark_scan.py
+- update tests/test_analyzer.py
+- update tests/test_cli.py
+- update tests/test_packaging_checker.py
+- update tests/test_release_readiness_checker.py
+- update tests/test_reporter.py
+- update tests/test_scan_integration.py
+- update tests/test_security_checker.py
+- update tests/test_style_checker.py
+
+### Build
+
+- update pyproject.toml
+
+### Other
+
+- build: update Makefile
+- update examples/git_scan_example.py
+- update weekly/__init__.py
+- update weekly/checkers/base.py
+- update weekly/checkers/dependencies.py
+- update weekly/checkers/packaging.py
+- update weekly/checkers/release_readiness.py
+- update weekly/checkers/security.py
+- update weekly/checkers/testing.py
+- update weekly/cli.py
+- ... and 8 more
+
+
 ## [0.1.40] - 2026-02-15
 
 ### Summary

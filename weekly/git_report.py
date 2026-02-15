@@ -10,7 +10,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-
 from weekly.core.report import CheckResult
 
 
@@ -599,8 +598,9 @@ class GitReportGenerator:
             Rendered HTML as a string
         """
         try:
-            from jinja2 import Environment, FileSystemLoader
             import os
+
+            from jinja2 import Environment, FileSystemLoader
 
             # Get the directory of the current file
             current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -608,7 +608,8 @@ class GitReportGenerator:
 
             env = Environment(loader=FileSystemLoader(template_dir))
             template = env.get_template(template_name)
-            return template.render(**context)
+            rendered: str = template.render(**context)
+            return rendered
         except ImportError:
             # Fallback to legacy rendering if Jinja2 is not installed
             if template_name == "repo_report.html":

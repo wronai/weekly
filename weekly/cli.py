@@ -60,7 +60,7 @@ def analyze(
     output: str,
     show_suggestions: bool,
     verbose: bool,
-)-> None:
+) -> None:
     """
     Analyze a Python project and provide quality insights.
 
@@ -181,16 +181,18 @@ def _parse_since_date(since_str: Optional[str]) -> Optional[datetime]:
     now = datetime.now()
 
     # Handle relative dates
-    if "ago" in since_str or any(word in since_str for word in ["day", "week", "month", "year"]):
+    if "ago" in since_str or any(
+        word in since_str for word in ["day", "week", "month", "year"]
+    ):
         try:
             # Basic relative parsing: "N days/weeks/months/years [ago]"
             parts = since_str.split()
             if not parts:
                 return None
-            
+
             value = int(parts[0])
             unit = parts[1] if len(parts) > 1 else "day"
-            
+
             if unit.startswith("day"):
                 return now - timedelta(days=value)
             elif unit.startswith("week"):
@@ -265,7 +267,7 @@ def scan(
     output_format: str,
     summary_only: bool,
     verbose: bool,
-)-> int:
+) -> int:
     """
     Scan multiple Git repositories and generate quality reports.
 

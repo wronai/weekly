@@ -4,7 +4,7 @@ Base checker class for Weekly project analysis.
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from ..core.logger import get_logger
 from ..core.project import Project

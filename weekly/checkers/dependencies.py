@@ -135,7 +135,10 @@ class DependenciesChecker(BaseChecker):
         Returns:
             Dict with 'dependencies' and 'dev_dependencies' lists of (name, constraint) tuples
         """
-        result: Dict[str, List[Tuple[str, str]]] = {"dependencies": [], "dev_dependencies": []}
+        result: Dict[str, List[Tuple[str, str]]] = {
+            "dependencies": [],
+            "dev_dependencies": [],
+        }
 
         # Check pyproject.toml (PEP 621 or Poetry)
         if project.pyproject:
@@ -147,21 +150,23 @@ class DependenciesChecker(BaseChecker):
                 if "dependencies" in poetry:
                     for name, spec in poetry["dependencies"].items():
                         if name.lower() != "python":
-                            constraint = (
-                                self._normalize_constraint(spec)
-                                if isinstance(spec, str)
-                                else "any"
-                            )
+                            if isinstance(spec, str):
+                                constraint = self._normalize_constraint(spec)
+                            elif isinstance(spec, dict) and "version" in spec:
+                                constraint = self._normalize_constraint(spec["version"])
+                            else:
+                                constraint = "any"
                             result["dependencies"].append((name, constraint))
 
                 # Dev dependencies
                 if "dev-dependencies" in poetry:
                     for name, spec in poetry["dev-dependencies"].items():
-                        constraint = (
-                            self._normalize_constraint(spec)
-                            if isinstance(spec, str)
-                            else "any"
-                        )
+                        if isinstance(spec, str):
+                            constraint = self._normalize_constraint(spec)
+                        elif isinstance(spec, dict) and "version" in spec:
+                            constraint = self._normalize_constraint(spec["version"])
+                        else:
+                            constraint = "any"
                         result["dev_dependencies"].append((name, constraint))
 
                 # Extras
@@ -195,27 +200,51 @@ class DependenciesChecker(BaseChecker):
         if setup_py_path.exists():
             try:
                 import ast
+
                 tree = ast.parse(setup_py_path.read_text(encoding="utf-8"))
                 for node in ast.walk(tree):
-                    if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "setup":
+                    if (
+                        isinstance(node, ast.Call)
+                        and getattr(node.func, "id", "") == "setup"
+                    ):
                         for keyword in node.keywords:
-                            if keyword.arg == "install_requires" and isinstance(keyword.value, ast.List):
+                            if keyword.arg == "install_requires" and isinstance(
+                                keyword.value, ast.List
+                            ):
                                 for elt in keyword.value.elts:
-                                    if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
-                                        name, _, constraint = self._parse_dep_spec(elt.value)
-                                        result["dependencies"].append((name, constraint or "any"))
-                            elif keyword.arg == "extras_require" and isinstance(keyword.value, ast.Dict):
+                                    if isinstance(elt, ast.Constant) and isinstance(
+                                        elt.value, str
+                                    ):
+                                        name, _, constraint = self._parse_dep_spec(
+                                            elt.value
+                                        )
+                                        result["dependencies"].append(
+                                            (name, constraint or "any")
+                                        )
+                            elif keyword.arg == "extras_require" and isinstance(
+                                keyword.value, ast.Dict
+                            ):
                                 for val in keyword.value.values:
                                     if isinstance(val, ast.List):
                                         for elt in val.elts:
-                                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
-                                                name, _, constraint = self._parse_dep_spec(elt.value)
-                                                result["dependencies"].append((name, constraint or "any"))
+                                            if isinstance(
+                                                elt, ast.Constant
+                                            ) and isinstance(elt.value, str):
+                                                (
+                                                    name,
+                                                    _,
+                                                    constraint,
+                                                ) = self._parse_dep_spec(elt.value)
+                                                result["dependencies"].append(
+                                                    (name, constraint or "any")
+                                                )
             except Exception:
                 # Fallback to naive parsing if AST fails
-                content = project.setup_py.lower()
-                if "install_requires" in content:
-                    pass
+                setup_py_content = project.setup_py
+                if setup_py_content:
+                    content = setup_py_content.lower()
+                    if "install_requires" in content:
+                        pass
 
         # Check requirements.txt
         if project.requirements_txt:
@@ -307,25 +336,25 @@ class DependenciesChecker(BaseChecker):
 
             # If it's a poetry project, we might want to use poetry export first or just audit the path
             # pip-audit can audit pyproject.toml if it's PEP 621, or we can audit requirements.txt
-            
+
             # Simple approach: audit the directory if pip-audit is installed
             result = subprocess.run(
-                cmd + [str(project.path)],
-                capture_output=True,
-                text=True,
-                check=False
+                cmd + [str(project.path)], capture_output=True, text=True, check=False
             )
 
             if result.returncode != 0 and result.stdout:
                 try:
                     import json
+
                     data = json.loads(result.stdout)
                     # pip-audit JSON format: {"dependencies": [{"name": "...", "version": "...", "vulnerabilities": [...]}]}
                     if "dependencies" in data:
                         for dep in data["dependencies"]:
                             if dep.get("vulnerabilities"):
                                 for vuln in dep["vulnerabilities"]:
-                                    vulnerabilities.append(f"{dep['name']} {dep['version']}: {vuln.get('id', 'Unknown Vuln')}")
+                                    vulnerabilities.append(
+                                        f"{dep['name']} {dep['version']}: {vuln.get('id', 'Unknown Vuln')}"
+                                    )
                 except json.JSONDecodeError:
                     pass
         except FileNotFoundError:
@@ -333,5 +362,5 @@ class DependenciesChecker(BaseChecker):
             pass
         except Exception:
             pass
-            
+
         return vulnerabilities

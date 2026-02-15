@@ -45,26 +45,38 @@ class SecurityChecker(BaseChecker):
 
         findings = []
         suggestions = []
-        metadata = {
+        metadata: Dict[str, Any] = {
             "secrets_found": len(secrets),
             "insecure_functions_found": len(insecure_funcs),
             "insecure_files_found": len(insecure_files),
-            "issues_data": {}
+            "issues_data": {},
         }
 
         if secrets:
-            findings.append(f"Found {len(secrets)} potential secrets/keys in the codebase.")
-            suggestions.append("Use environment variables or a secret manager (e.g., AWS Secrets Manager, Vault) instead of hardcoding secrets.")
+            findings.append(
+                f"Found {len(secrets)} potential secrets/keys in the codebase."
+            )
+            suggestions.append(
+                "Use environment variables or a secret manager (e.g., AWS Secrets Manager, Vault) instead of hardcoding secrets."
+            )
             metadata["issues_data"]["secrets"] = secrets
 
         if insecure_funcs:
-            findings.append(f"Found {len(insecure_funcs)} usages of potentially insecure functions (e.g., eval, exec).")
-            suggestions.append("Avoid using eval(), exec(), and os.system(). Use safer alternatives like ast.literal_eval() or the subprocess module.")
+            findings.append(
+                f"Found {len(insecure_funcs)} usages of potentially insecure functions (e.g., eval, exec)."
+            )
+            suggestions.append(
+                "Avoid using eval(), exec(), and os.system(). Use safer alternatives like ast.literal_eval() or the subprocess module."
+            )
             metadata["issues_data"]["insecure_functions"] = insecure_funcs
 
         if insecure_files:
-            findings.append(f"Found {len(insecure_files)} sensitive files that should not be committed (e.g., .env).")
-            suggestions.append("Add sensitive files like .env to your .gitignore and remove them from the repository history.")
+            findings.append(
+                f"Found {len(insecure_files)} sensitive files that should not be committed (e.g., .env)."
+            )
+            suggestions.append(
+                "Add sensitive files like .env to your .gitignore and remove them from the repository history."
+            )
             metadata["issues_data"]["insecure_files"] = insecure_files
 
         if not findings:
@@ -74,7 +86,7 @@ class SecurityChecker(BaseChecker):
                 status="success",
                 details="No common security issues or hardcoded secrets were detected.",
                 suggestions=["Regularly run security scanners like bandit or safety"],
-                metadata=metadata
+                metadata=metadata,
             )
 
         return CheckResult(
@@ -83,7 +95,7 @@ class SecurityChecker(BaseChecker):
             status="warning" if len(findings) < 3 else "error",
             details="\n".join(findings),
             suggestions=list(set(suggestions)),
-            metadata=metadata
+            metadata=metadata,
         )
 
     def _detect_secrets(self, project: Project) -> List[Dict[str, Any]]:
@@ -99,23 +111,29 @@ class SecurityChecker(BaseChecker):
 
         found_secrets = []
         for py_file in project.path.glob("**/*.py"):
-            if any(part in str(py_file) for part in ["venv", ".tox", "build", "tests"]):
+            file_rel_path = str(py_file.relative_to(project.path))
+            if any(
+                part in file_rel_path
+                for part in ["venv", ".tox", "build", "tests", "checkers/security.py"]
+            ):
                 continue
 
-            content = project.get_file_content(str(py_file.relative_to(project.path)))
+            content = project.get_file_content(file_rel_path)
             if not content:
                 continue
 
             for line_num, line in enumerate(content.splitlines(), 1):
                 for name, pattern in secret_patterns.items():
                     if re.search(pattern, line, re.IGNORECASE):
-                        found_secrets.append({
-                            "file": str(py_file.relative_to(project.path)),
-                            "line": line_num,
-                            "type": name,
-                            "code": "SEC100",
-                            "message": f"Potential {name} detected"
-                        })
+                        found_secrets.append(
+                            {
+                                "file": str(py_file.relative_to(project.path)),
+                                "line": line_num,
+                                "type": name,
+                                "code": "SEC100",
+                                "message": f"Potential {name} detected",
+                            }
+                        )
         return found_secrets
 
     def _detect_insecure_functions(self, project: Project) -> List[Dict[str, Any]]:
@@ -130,23 +148,29 @@ class SecurityChecker(BaseChecker):
 
         found_funcs = []
         for py_file in project.path.glob("**/*.py"):
-            if any(part in str(py_file) for part in ["venv", ".tox", "build"]):
+            file_rel_path = str(py_file.relative_to(project.path))
+            if any(
+                part in file_rel_path
+                for part in ["venv", ".tox", "build", "checkers/security.py"]
+            ):
                 continue
 
-            content = project.get_file_content(str(py_file.relative_to(project.path)))
+            content = project.get_file_content(file_rel_path)
             if not content:
                 continue
 
             for line_num, line in enumerate(content.splitlines(), 1):
                 for name, pattern in insecure_patterns.items():
                     if re.search(pattern, line):
-                        found_funcs.append({
-                            "file": str(py_file.relative_to(project.path)),
-                            "line": line_num,
-                            "type": name,
-                            "code": "SEC200",
-                            "message": f"Usage of insecure function {name} detected"
-                        })
+                        found_funcs.append(
+                            {
+                                "file": str(py_file.relative_to(project.path)),
+                                "line": line_num,
+                                "type": name,
+                                "code": "SEC200",
+                                "message": f"Usage of insecure function {name} detected",
+                            }
+                        )
         return found_funcs
 
     def _detect_insecure_files(self, project: Project) -> List[Dict[str, Any]]:
@@ -158,20 +182,24 @@ class SecurityChecker(BaseChecker):
             "id_rsa",
             "secrets.yaml",
             "secrets.json",
-            ".pypirc"
+            ".pypirc",
         ]
 
         found_files = []
         for pattern in sensitive_files:
             for sensitive_file in project.path.glob(f"**/{pattern}"):
-                if any(part in str(sensitive_file) for part in ["venv", ".tox", "build"]):
+                if any(
+                    part in str(sensitive_file) for part in ["venv", ".tox", "build"]
+                ):
                     continue
-                
-                found_files.append({
-                    "file": str(sensitive_file.relative_to(project.path)),
-                    "line": 0,
-                    "type": "Sensitive File",
-                    "code": "SEC300",
-                    "message": f"Sensitive file '{sensitive_file.name}' committed to repository"
-                })
+
+                found_files.append(
+                    {
+                        "file": str(sensitive_file.relative_to(project.path)),
+                        "line": 0,
+                        "type": "Sensitive File",
+                        "code": "SEC300",
+                        "message": f"Sensitive file '{sensitive_file.name}' committed to repository",
+                    }
+                )
         return found_files

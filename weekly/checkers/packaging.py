@@ -47,18 +47,28 @@ class PackagingChecker(BaseChecker):
         status = "success"
 
         if not build_system["pep517"]:
-            findings.append("Project does not follow PEP 517/518 (missing [build-system] in pyproject.toml).")
-            suggestions.append("Add a [build-system] section to your pyproject.toml to specify your build backend.")
+            findings.append(
+                "Project does not follow PEP 517/518 (missing [build-system] in pyproject.toml)."
+            )
+            suggestions.append(
+                "Add a [build-system] section to your pyproject.toml to specify your build backend."
+            )
             status = "warning"
 
         if metadata["missing"]:
-            findings.append(f"Missing essential package metadata: {', '.join(metadata['missing'])}.")
-            suggestions.append("Ensure your project configuration (pyproject.toml or setup.py) includes name, version, description, authors, and license.")
+            findings.append(
+                f"Missing essential package metadata: {', '.join(metadata['missing'])}."
+            )
+            suggestions.append(
+                "Ensure your project configuration (pyproject.toml or setup.py) includes name, version, description, authors, and license."
+            )
             status = "warning"
 
         if not dist_config["has_readme_in_config"]:
             findings.append("README not explicitly linked in packaging configuration.")
-            suggestions.append("Ensure your README file is specified in the metadata so it appears on PyPI.")
+            suggestions.append(
+                "Ensure your README file is specified in the metadata so it appears on PyPI."
+            )
             if status == "success":
                 status = "suggestion"
 
@@ -69,7 +79,7 @@ class PackagingChecker(BaseChecker):
                 status="success",
                 details="Project follows modern packaging standards and has complete metadata.",
                 suggestions=["Consider using a build tool like Poetry, Flit, or Hatch"],
-                metadata={**build_system, **metadata, **dist_config}
+                metadata={**build_system, **metadata, **dist_config},
             )
 
         return CheckResult(
@@ -78,14 +88,14 @@ class PackagingChecker(BaseChecker):
             status=status,
             details="\n".join(findings),
             suggestions=list(set(suggestions)),
-            metadata={**build_system, **metadata, **dist_config}
+            metadata={**build_system, **metadata, **dist_config},
         )
 
     def _check_build_system(self, project: Project) -> Dict[str, Any]:
         """Check for PEP 517/518 compliance."""
         has_build_system = False
         backend = "unknown"
-        
+
         if project.pyproject and "build-system" in project.pyproject:
             has_build_system = True
             backend = project.pyproject["build-system"].get("build-backend", "unknown")
@@ -93,14 +103,14 @@ class PackagingChecker(BaseChecker):
         return {
             "pep517": has_build_system,
             "build_backend": backend,
-            "has_pyproject": project.pyproject is not None
+            "has_pyproject": project.pyproject is not None,
         }
 
     def _check_metadata(self, project: Project) -> Dict[str, Any]:
         """Check for essential package metadata."""
         missing = []
         found = {}
-        
+
         # Check pyproject.toml (Poetry or PEP 621)
         if project.pyproject:
             if "tool" in project.pyproject and "poetry" in project.pyproject["tool"]:
@@ -136,13 +146,13 @@ class PackagingChecker(BaseChecker):
     def _check_dist_config(self, project: Project) -> Dict[str, Any]:
         """Check for distribution-specific configuration."""
         has_readme = False
-        
+
         if project.pyproject:
             if "tool" in project.pyproject and "poetry" in project.pyproject["tool"]:
                 has_readme = "readme" in project.pyproject["tool"]["poetry"]
             elif "project" in project.pyproject:
                 has_readme = "readme" in project.pyproject["project"]
-        
+
         if not has_readme and project.setup_py:
             has_readme = "long_description" in project.setup_py.lower()
 

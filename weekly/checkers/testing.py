@@ -40,7 +40,9 @@ class TestChecker(BaseChecker):
         test_coverage = self._check_test_coverage(project)
 
         # Look for test files specifically
-        test_files = list(project.path.glob("**/test_*.py")) + list(project.path.glob("**/*_test.py"))
+        test_files = list(project.path.glob("**/test_*.py")) + list(
+            project.path.glob("**/*_test.py")
+        )
         tests_discovered = len(test_files) > 0
 
         if not has_tests and not has_test_config:

@@ -19,22 +19,19 @@ def get_logger(name: str = "weekly") -> logging.Logger:
         logging.Logger: Configured logger instance
     """
     logger = logging.getLogger(name)
-    
+
     if not logger.handlers:
         logger.setLevel(logging.INFO)
-        
+
         # Use RichHandler for beautiful console logging
         handler = RichHandler(
-            rich_tracebacks=True,
-            markup=True,
-            show_time=False,
-            show_path=False
+            rich_tracebacks=True, markup=True, show_time=False, show_path=False
         )
-        
+
         formatter = logging.Formatter("%(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-        
+
     return logger
 
 

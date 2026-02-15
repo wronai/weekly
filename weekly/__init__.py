@@ -20,6 +20,9 @@ from .checkers.ci_cd import CIChecker
 from .checkers.code_quality import CodeQualityChecker
 from .checkers.dependencies import DependenciesChecker
 from .checkers.docs import DocumentationChecker
+from .checkers.packaging import PackagingChecker
+from .checkers.release_readiness import ReleaseReadinessChecker
+from .checkers.security import SecurityChecker
 from .checkers.style import StyleChecker
 from .checkers.testing import TestChecker
 
@@ -29,9 +32,7 @@ from .core.analyzer import analyze_project
 
 # Import core components
 from .core.project import Project
-from .core.repo_status import RepoStatus
 from .core.report import CheckResult, Report
-from .git_analyzer import CommitStats, GitAnalyzer
 from .git_report import GitReportGenerator, RepoInfo
 
 # Import Git scanner and report generator
@@ -42,9 +43,6 @@ __all__ = [
     "analyze_project",
     "Project",
     "Report",
-    "RepoStatus",
-    "GitAnalyzer",
-    "CommitStats",
     "main",  # Export main as cli
     "CheckResult",
     # Checkers
@@ -55,6 +53,9 @@ __all__ = [
     "DependenciesChecker",
     "CodeQualityChecker",
     "StyleChecker",
+    "SecurityChecker",
+    "PackagingChecker",
+    "ReleaseReadinessChecker",
     # Git scanning
     "GitRepo",
     "GitScanner",

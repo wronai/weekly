@@ -135,12 +135,12 @@ publish:
 ## Build documentation
 docs:
 	@echo "${YELLOW}Building documentation...${RESET}"
-	cd docs && poetry run make html
+	poetry run mkdocs build
 
 ## Serve documentation locally
 serve:
 	@echo "${YELLOW}Serving documentation at http://localhost:8000${RESET}"
-	cd docs/_build/html && python -m http.server
+	poetry run mkdocs serve
 
 ## Install pre-commit hooks
 pre-commit:

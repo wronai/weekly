@@ -9,7 +9,6 @@ import pytest
 from click.testing import CliRunner
 
 from weekly.cli import main
-from weekly.core.repo_status import RepoStatus
 
 
 @pytest.fixture
@@ -67,7 +66,7 @@ def test_analyze_org_command(mock_find, mock_init, mock_scan_all, runner, tmp_pa
     mock_repo.path = tmp_path / "org" / "test-repo"
     mock_repo.path.mkdir(parents=True)
     mock_repo.name = "test-repo"
-    mock_repo.organization = "test-org"
+    mock_repo.org = "test-org"
 
     # Setup mock scan results
     mock_result = MagicMock()
@@ -109,12 +108,8 @@ def test_cli_help(runner):
     assert "scan" in result.output
 
 
-@patch("weekly.git_analyzer.GitAnalyzer")
-def test_analyze_command_no_repo(mock_analyzer, runner, tmp_path):
+def test_analyze_command_no_repo(runner, tmp_path):
     """Test the analyze command with a non-existent repository."""
-    # Setup mock to return None (no repo found)
-    mock_analyzer.return_value.analyze.return_value = None
-
     # Run the command with a non-existent path
     non_existent_path = tmp_path / "nonexistent"
     result = runner.invoke(main, ["analyze", str(non_existent_path)])

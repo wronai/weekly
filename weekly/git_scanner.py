@@ -273,9 +273,7 @@ class GitScanner:
                     self.since, changelog_path
                 )
                 if not used_git_cliff:
-                    logger.warning(
-                        "  Using fallback changelog generation..."
-                    )
+                    logger.warning("  Using fallback changelog generation...")
                     summary_text = analyzer.generate_summary_report(
                         result.change_summary
                     )
@@ -306,6 +304,7 @@ class GitScanner:
                 DependenciesChecker,
                 DocumentationChecker,
                 PackagingChecker,
+                ReleaseReadinessChecker,
                 SecurityChecker,
                 StyleChecker,
                 TestChecker,
@@ -322,6 +321,7 @@ class GitScanner:
                 CIChecker(),
                 SecurityChecker(),
                 PackagingChecker(),
+                ReleaseReadinessChecker(),
             ]
 
             # Run all checkers
@@ -379,7 +379,9 @@ class GitScanner:
                             _ = result.repo
                             _ = result.results
                             if result.error:
-                                logger.error(f"Error in scan result for {repo.path}: {result.error}")
+                                logger.error(
+                                    f"Error in scan result for {repo.path}: {result.error}"
+                                )
                             results.append(result)
                         except Exception as e:
                             logger.error(
@@ -539,12 +541,12 @@ class GitScanner:
         for suffix in [".html", ".md", ".llm.md"]:
             target_file = report_path.with_suffix(suffix)
             if suffix == ".llm.md":
-                # Special case for .llm.md because report_path.with_suffix(".llm.md") 
+                # Special case for .llm.md because report_path.with_suffix(".llm.md")
                 # might result in timestamp.llm.md if report_path is timestamp.html
                 # Wait, Path("foo.html").with_suffix(".md") -> "foo.md"
                 # Path("foo.html").with_suffix(".llm.md") -> "foo.llm.md"
                 pass
-            
+
             latest_link = output_dir / f"latest{suffix}"
 
             # Remove existing symlink if it exists
@@ -553,9 +555,7 @@ class GitScanner:
                     latest_link.unlink()
                     logger.info(f"Removed existing symlink: {latest_link}")
                 except OSError as e:
-                    logger.warning(
-                        f"Could not remove existing {latest_link.name}: {e}"
-                    )
+                    logger.warning(f"Could not remove existing {latest_link.name}: {e}")
 
             # Create new symlink
             try:
@@ -563,14 +563,11 @@ class GitScanner:
                     # Use absolute path for the target to avoid any relative path issues
                     target_path = target_file.absolute()
                     latest_link.symlink_to(target_path)
-                    logger.info(
-                        f"Created symlink: {latest_link} -> {target_path}"
-                    )
+                    logger.info(f"Created symlink: {latest_link} -> {target_path}")
             except OSError as e:
-                logger.warning(
-                    f"Could not create {latest_link.name} symlink: {e}"
-                )
+                logger.warning(f"Could not create {latest_link.name} symlink: {e}")
                 import traceback
+
                 traceback.print_exc()
 
         return report_path
